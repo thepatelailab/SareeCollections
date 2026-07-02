@@ -1,0 +1,62 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /SareeCollection/{sareeId} {
+      allow get, list: if true;
+      allow create, delete: if isAdmin() || isWholesaler();
+      // Allow any user to update ONLY the 'likes' and 'shares' metrics
+      // Wholesalers can update their own products
+      allow update: if isAdmin() || 
+                    (isWholesaler() && request.auth.uid == resource.data.ownerId) ||
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares']));
+    }
+
+    match /wholesalerRequests/{requestId} {
+      allow create: if true; // Anyone can apply
+      allow get, list, update, delete: if isAdmin();
+    }
+
+    match /countries/{id} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /states/{id} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /sareeVarieties/{id} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get, list, update, delete: if isOwner(userId);
+      allow create: if isOwner(userId);
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+        return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isWholesaler() {
+        return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'wholesaler';
+    }
+  }
+}

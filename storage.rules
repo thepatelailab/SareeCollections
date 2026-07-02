@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+  
+    // Allow public read access to all files
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Allow authenticated users to write to the 'SareeCollection' directory
+    match /SareeCollection/{productId}/{fileName} {
+      allow write: if request.auth != null;
+    }
+
+    // Allow authenticated users to write to the 'settings' directory
+    match /settings/{fileName} {
+      allow write: if request.auth != null;
+    }
+  }
+}

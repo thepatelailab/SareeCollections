@@ -1,0 +1,28 @@
+{
+  "placeholderImages": [
+    {
+      "id": "saree-1",
+      "description": "A beautiful red and gold Banarasi silk saree, perfect for weddings and festive occasions. It features intricate zari work and a rich pallu.",
+      "imageUrl": "https://images.unsplash.com/photo-1518893063132-36e46dbe2428?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxyZWQlMjBzaWxrJTIwc2FyZWV8ZW58MHx8fHwxNzU5NjU2NzMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "red silk saree"
+    },
+    {
+      "id": "saree-2",
+      "description": "An elegant blue cotton saree with delicate floral block prints. Lightweight and comfortable for daily wear, it has a simple yet classy appeal.",
+      "imageUrl": "https://images.unsplash.com/photo-1634225180401-ccdcee2c101c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxibHVlJTIwY290dG9uJTIwc2FyZWV8ZW58MHx8fHwxNzU5NjU2NzMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "blue cotton saree"
+    },
+    {
+      "id": "saree-3",
+      "description": "A traditional green Kanjeevaram saree with a contrasting pink border. Known for its durability and lustrous shine, it's a timeless classic.",
+      "imageUrl": "https://images.unsplash.com/photo-1672826953528-be64d72082d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxncmVlbiUyMGthbmplZXZhcmFtJTIwc2FyZWV8ZW58MHx8fHwxNzU5NjU2NzMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "green kanjeevaram saree"
+    },
+    {
+      "id": "saree-4",
+      "description": "A modern black georgette saree with subtle sequin work. It's lightweight, drapes beautifully, and is ideal for evening parties and events.",
+      "imageUrl": "https://images.unsplash.com/photo-1551033654-352edc254c67?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxibGFjayUyMGdlb3JnZXR0ZSUyMHNhcmVlfGVufDB8fHx8MTc1OTY1NjczMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "black georgette saree"
+    }
+  ]
+}
