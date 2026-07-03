@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +9,7 @@ import {
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -50,12 +51,10 @@ export function LoginForm() {
       let finalUser;
 
       if (action === 'signup') {
-        // For sign-up, we link the anonymous account to a new email/password credential.
         const credential = EmailAuthProvider.credential(email, password);
         const userCredential = await linkWithCredential(user, credential);
         finalUser = userCredential.user;
       } else {
-        // For login, we sign in directly. This will trigger onAuthStateChanged and update the user object.
         const userCredential = await signInWithEmailAndPassword(
           auth,
           email,
@@ -64,23 +63,26 @@ export function LoginForm() {
         finalUser = userCredential.user;
       }
 
-      // CRITICAL: Await the creation of the user profile document.
-      // This ensures the role is set in Firestore before proceeding.
+      // Check if user already has a role to avoid overwriting (especially for wholesalers)
       const userRef = doc(firestore, 'users', finalUser.uid);
-      const role = finalUser.email === ADMIN_EMAIL ? 'admin' : 'customer';
-      await setDoc(userRef, { role }, { merge: true });
+      const docSnap = await getDoc(userRef);
+      
+      if (!docSnap.exists() || !docSnap.data()?.role) {
+        const role = finalUser.email === ADMIN_EMAIL ? 'admin' : 'customer';
+        await setDoc(userRef, { role }, { merge: true });
+      }
 
-      // After setting the document, force a refetch of the user profile in the AppContext
       await refetchUserProfile();
 
       toast({
         title: action === 'signup' ? 'Account Created!' : 'Login Successful!',
-        description: "You've been successfully authenticated.",
+        description: "Welcome to SareeDukan.",
       });
 
+      // Explicitly redirect to the main page or redirect URL
       router.push(redirectUrl);
+      router.refresh();
     } catch (error: any) {
-      console.error(`${action} failed:`, error);
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
@@ -98,9 +100,9 @@ export function LoginForm() {
         <TabsTrigger value="signup">Sign Up</TabsTrigger>
       </TabsList>
       <TabsContent value="login">
-        <Card>
+        <Card className="border-none shadow-xl rounded-3xl">
           <CardHeader>
-            <CardTitle className="font-headline">Login</CardTitle>
+            <CardTitle className="font-headline text-2xl text-primary">Login</CardTitle>
             <CardDescription>
               Sign in to your account to continue.
             </CardDescription>
@@ -115,6 +117,7 @@ export function LoginForm() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                className="rounded-xl h-12"
               />
             </div>
             <div className="space-y-2">
@@ -125,13 +128,14 @@ export function LoginForm() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                className="rounded-xl h-12"
               />
             </div>
           </CardContent>
           <CardFooter>
             <Button
               onClick={() => handleAuthAction('login')}
-              className="w-full"
+              className="w-full h-12 rounded-xl bg-primary text-white"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -141,9 +145,9 @@ export function LoginForm() {
         </Card>
       </TabsContent>
       <TabsContent value="signup">
-        <Card>
+        <Card className="border-none shadow-xl rounded-3xl">
           <CardHeader>
-            <CardTitle className="font-headline">Sign Up</CardTitle>
+            <CardTitle className="font-headline text-2xl text-primary">Sign Up</CardTitle>
             <CardDescription>
               Create a new account to place your order.
             </CardDescription>
@@ -158,6 +162,7 @@ export function LoginForm() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                className="rounded-xl h-12"
               />
             </div>
             <div className="space-y-2">
@@ -168,13 +173,14 @@ export function LoginForm() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                className="rounded-xl h-12"
               />
             </div>
           </CardContent>
           <CardFooter>
             <Button
               onClick={() => handleAuthAction('signup')}
-              className="w-full"
+              className="w-full h-12 rounded-xl bg-primary text-white"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
