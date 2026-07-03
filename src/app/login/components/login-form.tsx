@@ -69,17 +69,19 @@ export function LoginForm() {
       
       if (!docSnap.exists() || !docSnap.data()?.role) {
         const role = finalUser.email === ADMIN_EMAIL ? 'admin' : 'customer';
+        // Await the write to ensure the profile exists before we redirect
         await setDoc(userRef, { role }, { merge: true });
       }
 
+      // Force a refetch of the profile in the app context
       await refetchUserProfile();
 
       toast({
         title: action === 'signup' ? 'Account Created!' : 'Login Successful!',
-        description: "Welcome to SareeDukan.",
+        description: "Welcome back to SareeDukan.",
       });
 
-      // Explicitly redirect to the main page or redirect URL
+      // Navigate to the target page or homepage
       router.push(redirectUrl);
       router.refresh();
     } catch (error: any) {

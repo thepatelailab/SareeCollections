@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -18,23 +19,25 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSettingsPage() {
   const { user, isUserLoading } = useUser();
-  const { isAdmin } = useAppContext();
+  const { isAdmin, isLoading: isAppLoading } = useAppContext();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // CRITICAL: Only initiate query if we have confirmed the user is an admin.
+    // This prevents "insufficient permissions" errors on the first login.
+    if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'wholesalerRequests'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+  }, [firestore, isAdmin]);
 
   const { data: requests, isLoading: isRequestsLoading } = useCollection<WholesalerRequest>(requestsQuery as any);
 
   useEffect(() => {
-    if (!isUserLoading && !isAdmin) {
+    if (!isUserLoading && !isAppLoading && !isAdmin) {
       router.push('/');
     }
-  }, [user, isUserLoading, isAdmin, router]);
+  }, [user, isUserLoading, isAppLoading, isAdmin, router]);
 
   const handleUpdateRequest = async (request: WholesalerRequest, status: 'approved' | 'rejected') => {
     if (!firestore || !request.id) return;
@@ -53,7 +56,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (isUserLoading || !isAdmin) {
+  if (isUserLoading || isAppLoading || !isAdmin) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Skeleton className="h-10 w-48 mb-8" />
