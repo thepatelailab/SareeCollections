@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,6 +6,7 @@ import {
   linkWithCredential,
   EmailAuthProvider,
   signInWithEmailAndPassword,
+  User,
 } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -31,7 +31,7 @@ const ADMIN_EMAIL = 'bp.brpl@gmail.com';
 export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user: currentUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -43,16 +43,35 @@ export function LoginForm() {
 
   const redirectUrl = searchParams.get('redirect') || '/';
 
+  const syncUserProfile = async (user: User) => {
+    if (!firestore) return;
+    try {
+      const userRef = doc(firestore, 'users', user.uid);
+      const docSnap = await getDoc(userRef);
+      
+      if (!docSnap.exists() || !docSnap.data()?.role) {
+        const role = user.email === ADMIN_EMAIL ? 'admin' : 'customer';
+        await setDoc(userRef, { role }, { merge: true });
+      }
+      // Ensure the context is updated
+      await refetchUserProfile();
+    } catch (e) {
+      // Log non-fatal error to console for debugging, but don't block the user
+      console.warn("Profile sync delay:", e);
+    }
+  };
+
   const handleAuthAction = async (action: 'login' | 'signup') => {
-    if (!auth || !user || !firestore) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
 
     try {
-      let finalUser;
+      let finalUser: User;
 
       if (action === 'signup') {
+        if (!currentUser) throw new Error("No anonymous session found.");
         const credential = EmailAuthProvider.credential(email, password);
-        const userCredential = await linkWithCredential(user, credential);
+        const userCredential = await linkWithCredential(currentUser, credential);
         finalUser = userCredential.user;
       } else {
         const userCredential = await signInWithEmailAndPassword(
@@ -63,25 +82,16 @@ export function LoginForm() {
         finalUser = userCredential.user;
       }
 
-      // Check if user already has a role to avoid overwriting (especially for wholesalers)
-      const userRef = doc(firestore, 'users', finalUser.uid);
-      const docSnap = await getDoc(userRef);
-      
-      if (!docSnap.exists() || !docSnap.data()?.role) {
-        const role = finalUser.email === ADMIN_EMAIL ? 'admin' : 'customer';
-        // Await the write to ensure the profile exists before we redirect
-        await setDoc(userRef, { role }, { merge: true });
-      }
-
-      // Force a refetch of the profile in the app context
-      await refetchUserProfile();
-
+      // We have the finalUser, so sign-in is successful.
       toast({
         title: action === 'signup' ? 'Account Created!' : 'Login Successful!',
         description: "Welcome back to SareeDukan.",
       });
 
-      // Navigate to the target page or homepage
+      // Handle profile sync asynchronously to avoid permission lag blocking the UI
+      syncUserProfile(finalUser);
+
+      // Navigate to the target page or homepage immediately
       router.push(redirectUrl);
       router.refresh();
     } catch (error: any) {
