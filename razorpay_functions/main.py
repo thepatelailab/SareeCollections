@@ -24,17 +24,14 @@ if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # Initialize Firebase Admin
-# Cloud Run typically uses the default service account, but we support an ENV fallback
 try:
     if not firebase_admin._apps:
         firebase_creds_json = os.getenv('FIREBASE_CREDENTIALS_JSON')
         if firebase_creds_json:
-            # If provided via ENV, parse the JSON string
             cred_dict = json.loads(firebase_creds_json)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
         else:
-            # Fallback to default credentials (works if Cloud Run has correct roles)
             firebase_admin.initialize_app()
 except Exception as e:
     print(f"CRITICAL: Error initializing Firebase: {e}")
@@ -43,7 +40,7 @@ db = firestore.Client()
 
 app = FastAPI(title="SareeDukan Payment API")
 
-# Configure CORS - Extremely permissive for ease of initial setup
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -87,7 +84,7 @@ async def root():
         "status": "online",
         "configuration": {
             "razorpay_configured": razorpay_client is not None,
-            "key_id_present": RAZORPAY_KEY_ID is not None
+            "public_key": RAZORPAY_KEY_ID # Public part of the key for frontend discovery
         },
         "endpoints": ["/create-order", "/webhook", "/health"]
     }
@@ -95,10 +92,9 @@ async def root():
 @app.post("/create-order")
 async def create_order(data: CreateOrderRequest):
     if not razorpay_client:
-        raise HTTPException(status_code=500, detail="Razorpay client NOT initialized. Check server env variables (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET).")
+        raise HTTPException(status_code=500, detail="Razorpay client NOT initialized. Check server env variables.")
     
     try:
-        # Generate a unique receipt ID
         receipt_id = f"rcpt_{int(datetime.now(timezone.utc).timestamp())}_{data.user_id[:5]}"
         
         order_params = {
@@ -110,10 +106,8 @@ async def create_order(data: CreateOrderRequest):
             }
         }
         
-        # 1. Create Order in Razorpay
         order = razorpay_client.order.create(order_params)
         
-        # 2. Record pending order in Firestore
         db.collection("orders").document(order["id"]).set({
             "order_id": order["id"],
             "user_id": data.user_id,
@@ -133,28 +127,25 @@ async def create_order(data: CreateOrderRequest):
 @app.post("/webhook")
 async def webhook(request: Request):
     if not RAZORPAY_WEBHOOK_SECRET:
-        raise HTTPException(status_code=500, detail="RAZORPAY_WEBHOOK_SECRET not configured on server")
+        raise HTTPException(status_code=500, detail="RAZORPAY_WEBHOOK_SECRET not configured")
         
     body = await request.body()
     received_signature = request.headers.get("X-Razorpay-Signature")
 
     if not received_signature:
-        raise HTTPException(status_code=400, detail="X-Razorpay-Signature missing from headers")
+        raise HTTPException(status_code=400, detail="Signature missing")
 
     try:
-        # Verify the signature
         razorpay_client.utility.verify_webhook_signature(
             body.decode('utf-8'), 
             received_signature, 
             RAZORPAY_WEBHOOK_SECRET
         )
     except Exception as e:
-        print(f"Webhook signature verification failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
     payload = json.loads(body)
     
-    # Handle the specific event
     if payload.get("event") == "payment.captured":
         entity = payload["payload"]["payment"]["entity"]
         process_successful_payment(
@@ -169,8 +160,3 @@ async def webhook(request: Request):
 @app.get("/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)

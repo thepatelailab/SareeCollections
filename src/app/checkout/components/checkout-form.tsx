@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,14 +32,9 @@ const checkoutSchema = z.object({
 
 // Helper to get clean base URL
 const getApiBase = () => {
-  let url = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-  if (!url) return 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
-  
-  // Strip common trailing segments to get the clean root URL
-  return url.replace(/\/+$/, '').split('/webhook')[0].split('/create-order')[0].split('/razorpay')[0];
+  let url = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+  return url.replace(/\/+$/, '').split('/webhook')[0].split('/create-order')[0];
 };
-
-const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
 declare global {
   interface Window {
@@ -54,6 +49,25 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discoveredKey, setDiscoveredKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Discovery logic: if NEXT_PUBLIC_RAZORPAY_KEY_ID is missing, fetch it from backend
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(getApiBase());
+        if (response.ok) {
+          const data = await response.json();
+          if (data.configuration?.public_key) {
+            setDiscoveredKey(data.configuration.public_key);
+          }
+        }
+      } catch (err) {
+        console.warn('API Config discovery failed, relying on env vars.');
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -68,8 +82,10 @@ export function CheckoutForm() {
   });
 
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
-    if (!RAZORPAY_KEY_ID || RAZORPAY_KEY_ID.includes('your_key_id')) {
-      setError("Razorpay Key ID is missing in frontend configuration. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID.");
+    const activeKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || discoveredKey;
+
+    if (!activeKey || activeKey.includes('your_key_id')) {
+      setError("Razorpay Key ID missing. Ensure RAZORPAY_KEY_ID is set in Cloud Run and the API is reachable.");
       return;
     }
 
@@ -77,7 +93,7 @@ export function CheckoutForm() {
       toast({ 
         variant: 'destructive', 
         title: 'Payment Error', 
-        description: 'Razorpay SDK not loaded. Please wait a moment and try again.' 
+        description: 'Razorpay SDK not loaded. Please try again.' 
       });
       return;
     }
@@ -87,40 +103,32 @@ export function CheckoutForm() {
 
     try {
       const apiBase = getApiBase();
-      const orderEndpoint = `${apiBase}/create-order`;
-      
-      console.log('Fetching order from:', orderEndpoint);
-      
-      const response = await fetch(orderEndpoint, {
+      const response = await fetch(`${apiBase}/create-order`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: Math.round(cartTotal * 100), // convert to paise
+          amount: Math.round(cartTotal * 100),
           user_id: user?.uid,
           items: cartItems.map(i => i.name),
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(errorData.detail || 'Failed to create order on server');
+        const errData = await response.json().catch(() => ({ detail: 'Backend Error' }));
+        throw new Error(errData.detail || 'Failed to create order');
       }
 
       const order = await response.json();
 
       const options = {
-        key: RAZORPAY_KEY_ID,
+        key: activeKey,
         amount: order.amount,
         currency: order.currency,
         name: "SareeDukan.Com",
         description: "Heritage Handloom Acquisition",
-        image: "/SareeDukan.png",
         order_id: order.id,
         handler: function (response: any) {
-          toast({ title: 'Payment Confirmed', description: 'Your order has been placed successfully.' });
+          toast({ title: 'Success!', description: 'Your masterpiece is on its way.' });
           clearCart();
           router.push('/');
         },
@@ -136,15 +144,14 @@ export function CheckoutForm() {
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (resp: any) {
+      rzp.on('payment.failed', (resp: any) => {
         setIsProcessing(false);
         setError(resp.error.description);
       });
       rzp.open();
     } catch (err: any) {
       setIsProcessing(false);
-      setError(err.message || "An error occurred during checkout initialization.");
-      console.error('Checkout error:', err);
+      setError(err.message || "Checkout failed to initialize.");
     }
   };
 
@@ -155,16 +162,13 @@ export function CheckoutForm() {
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground p-8">
           <CardTitle className="font-headline text-3xl">Shipping & Payment</CardTitle>
-          <CardDescription className="text-primary-foreground/70">Securely finalize your acquisition.</CardDescription>
+          <CardDescription className="text-primary-foreground/70">Finalize your heritage acquisition.</CardDescription>
         </CardHeader>
         <CardContent className="p-8">
           {error && (
             <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold">
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-              <div>
-                <p>{error}</p>
-                <p className="text-[10px] mt-1 opacity-70">Check console for detailed logs.</p>
-              </div>
+              <p>{error}</p>
             </div>
           )}
 
@@ -193,11 +197,9 @@ export function CheckoutForm() {
                 )} />
               </div>
 
-              <Separator className="my-8" />
-
-              <div className="bg-muted/30 p-6 rounded-3xl flex justify-between items-center">
+              <div className="bg-muted/30 p-6 rounded-3xl flex justify-between items-center mt-8">
                 <div className="space-y-1">
-                  <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Total Payable</span>
+                  <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Total Amount</span>
                   <div className="text-3xl font-black text-primary">INR {cartTotal.toFixed(2)}</div>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
@@ -207,18 +209,10 @@ export function CheckoutForm() {
 
               <Button 
                 type="submit" 
-                className="w-full py-8 text-xl font-headline bg-primary hover:bg-primary/90 rounded-2xl shadow-xl shadow-primary/20" 
+                className="w-full py-8 text-xl font-headline bg-primary hover:bg-primary/90 rounded-2xl shadow-xl" 
                 disabled={isProcessing}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Preparing Checkout...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-6 w-6" /> Acquire Now
-                  </>
-                )}
+                {isProcessing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <><CreditCard className="mr-2 h-6 w-6" /> Acquire Now</>}
               </Button>
             </form>
           </Form>
