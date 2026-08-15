@@ -1,41 +1,11 @@
-# Python
-__pycache__
+Dockerfile
+README.md
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
-
-# Environment files
+__pycache__
+.pytest_cache
 .env
-.venv
-env/
-venv/
-ENV/
-
-# Git
 .git
 .gitignore
-.github/
-
-# Firebase credentials (explicitly exclude since we're using env var)
 *.json
-!requirements.txt
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-tmp/
-temp/

@@ -30,7 +30,7 @@ const checkoutSchema = z.object({
   zip: z.string().min(4, 'ZIP code is required'),
 });
 
-// Replace this with your actual Cloud Run URL after deployment
+// IMPORTANT: Update these with your Cloud Run URL and Razorpay Key ID
 const RAZORPAY_API_BASE = 'https://razorpay-webapi-your-id.a.run.app';
 const RAZORPAY_KEY_ID = 'rzp_test_your_key_id'; 
 
@@ -61,14 +61,18 @@ export function CheckoutForm() {
 
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
     if (!window.Razorpay) {
-      toast({ variant: 'destructive', title: 'Payment Error', description: 'Razorpay SDK failed to load.' });
+      toast({ 
+        variant: 'destructive', 
+        title: 'Payment Error', 
+        description: 'Razorpay SDK failed to load. Please check your internet connection.' 
+      });
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. Create order on your backend
+      // 1. Create order on your Cloud Run backend
       const response = await fetch(`${RAZORPAY_API_BASE}/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,7 +83,11 @@ export function CheckoutForm() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to initiate order');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to initiate order');
+      }
+
       const order = await response.json();
 
       // 2. Open Razorpay Modal
@@ -88,10 +96,13 @@ export function CheckoutForm() {
         amount: order.amount,
         currency: order.currency,
         name: "Saree Dukan",
-        description: "Handloom Saree Purchase",
+        description: `Purchase of ${cartCount} heritage sarees`,
         order_id: order.id,
         handler: function (response: any) {
-          toast({ title: 'Payment Successful', description: `ID: ${response.razorpay_payment_id}` });
+          toast({ 
+            title: 'Payment Successful', 
+            description: 'Your order has been placed successfully.' 
+          });
           clearCart();
           router.push('/');
         },
@@ -100,23 +111,35 @@ export function CheckoutForm() {
           email: formData.email,
           contact: formData.phone,
         },
+        notes: {
+          address: `${formData.address}, ${formData.city} - ${formData.zip}`
+        },
         theme: {
-          color: "#345100", // Maroon primary color
+          color: "#40000A", // Signature Maroon
         },
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Payment Failed', 
+          description: response.error.description 
+        });
+      });
       rzp.open();
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Order Failed', description: err.message });
+      toast({ 
+        variant: 'destructive', 
+        title: 'Order Initialization Failed', 
+        description: err.message 
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (cartCount === 0) {
-    return null;
-  }
+  if (cartCount === 0) return null;
 
   return (
     <div className="space-y-8">
@@ -170,11 +193,11 @@ export function CheckoutForm() {
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Initializing...
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Preparing Payment...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="mr-2 h-6 w-6" /> Pay & Place Order
+                    <CreditCard className="mr-2 h-6 w-6" /> Proceed to Pay
                   </>
                 )}
               </Button>

@@ -14,7 +14,6 @@ from firebase_admin import credentials
 
 # --- Configuration & Initialization ---
 
-# These should be set in Cloud Run Environment Variables
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
@@ -27,14 +26,13 @@ if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
 # Initialize Firebase Admin
 try:
     if not firebase_admin._apps:
-        # Priority 1: Environment variable string (for Cloud Run)
         firebase_creds_json = os.getenv('FIREBASE_CREDENTIALS_JSON')
         if firebase_creds_json:
             cred_dict = json.loads(firebase_creds_json)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
         else:
-            # Priority 2: Application Default Credentials (for GCP internal services)
+            # Fallback for Cloud Run with attached service account
             firebase_admin.initialize_app()
 except Exception as e:
     print(f"Error initializing Firebase: {e}")
@@ -46,7 +44,7 @@ app = FastAPI(title="SareeDukan Payment API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # In production, replace with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,9 +53,9 @@ app.add_middleware(
 # --- Pydantic Models ---
 
 class CreateOrderRequest(BaseModel):
-    amount: int = Field(..., ge=100, le=5000000) # Up to 50,000 INR
+    amount: int = Field(..., ge=100) # Amount in paise (Min 1 INR)
     user_id: str
-    items: list = []
+    items: list[str] = []
 
 # --- Helper Functions ---
 
@@ -68,15 +66,14 @@ def process_successful_payment(user_id: str, amount_paise: int, payment_id: str,
     order_ref = db.collection("orders").document(order_id)
     
     transaction_data = {
-        "user_id": user_id,
-        "amount_paise": amount_paise,
         "payment_id": payment_id,
         "status": "paid",
+        "paid_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
 
     try:
-        order_ref.set(transaction_data, merge=True)
+        order_ref.update(transaction_data)
         return True
     except Exception as e:
         print(f"Error updating order {order_id}: {e}")
@@ -87,9 +84,10 @@ def process_successful_payment(user_id: str, amount_paise: int, payment_id: str,
 @app.post("/create-order")
 async def create_order(data: CreateOrderRequest):
     if not razorpay_client:
-        raise HTTPException(status_code=500, detail="Razorpay not configured")
+        raise HTTPException(status_code=500, detail="Razorpay not configured on server")
     
     try:
+        # 1. Create Order in Razorpay
         receipt_id = f"rcpt_{int(datetime.now(timezone.utc).timestamp())}_{data.user_id[:5]}"
         order_params = {
             "amount": data.amount,
@@ -97,18 +95,21 @@ async def create_order(data: CreateOrderRequest):
             "receipt": receipt_id,
             "notes": {
                 "user_id": data.user_id,
-                "items": ",".join([str(i) for i in data.items])
+                "item_count": len(data.items)
             }
         }
         order = razorpay_client.order.create(order_params)
         
-        # Pre-create the order in Firestore
+        # 2. Pre-create the order record in Firestore
         db.collection("orders").document(order["id"]).set({
+            "order_id": order["id"],
             "user_id": data.user_id,
             "amount_paise": data.amount,
             "status": "pending",
             "created_at": datetime.now(timezone.utc),
-            "items": data.items
+            "updated_at": datetime.now(timezone.utc),
+            "items": data.items,
+            "receipt": receipt_id
         })
 
         return JSONResponse(content=order)
@@ -148,3 +149,8 @@ async def webhook(request: Request):
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
