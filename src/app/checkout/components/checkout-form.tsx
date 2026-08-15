@@ -19,7 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ShieldCheck, CreditCard } from 'lucide-react';
+import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -30,8 +30,13 @@ const checkoutSchema = z.object({
   zip: z.string().min(4, 'ZIP code is required'),
 });
 
-// Environment variables check
-const RAZORPAY_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+// Helper to get clean base URL
+const getApiBase = () => {
+  let url = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+  // Remove trailing slashes and common path segments if accidentally included
+  return url.replace(/\/+$/, '').replace(/\/webhook$/, '').replace(/\/create-order$/, '');
+};
+
 const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_id'; 
 
 declare global {
@@ -46,6 +51,7 @@ export function CheckoutForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -60,64 +66,53 @@ export function CheckoutForm() {
   });
 
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
-    // 0. Ensure SDK is ready
     if (!window.Razorpay) {
       toast({ 
         variant: 'destructive', 
         title: 'Payment Error', 
-        description: 'Payment gateway is still loading. Please wait a few seconds and try again.' 
+        description: 'Razorpay SDK not loaded. Refreshing page might help.' 
       });
       return;
     }
 
     setIsProcessing(true);
+    setError(null);
 
     try {
-      // 1. Create order on your Cloud Run backend
-      console.log(`Initiating order creation at: ${RAZORPAY_API_BASE}/create-order`);
-      const response = await fetch(`${RAZORPAY_API_BASE}/create-order`, {
+      const apiBase = getApiBase();
+      const orderEndpoint = `${apiBase}/create-order`;
+      
+      console.log('Initiating payment at:', orderEndpoint);
+      
+      const response = await fetch(orderEndpoint, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          amount: Math.round(cartTotal * 100), // convert to paise
+          amount: Math.round(cartTotal * 100),
           user_id: user?.uid,
           items: cartItems.map(i => i.name),
         }),
       });
 
       if (!response.ok) {
-        let errorMessage = 'Failed to initiate order';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorMessage;
-        } catch (e) {
-          errorMessage = `Server returned ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+        const errorText = await response.text();
+        throw new Error(`Order creation failed: ${errorText || response.statusText}`);
       }
 
       const order = await response.json();
 
-      if (!order.id) {
-        throw new Error('Invalid order response from server');
-      }
-
-      // 2. Open Razorpay Modal
       const options = {
         key: RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: order.currency,
-        name: "Saree Dukan",
-        description: `Purchase of ${cartCount} heritage sarees`,
+        name: "SareeDukan.Com",
+        description: "Heritage Handloom Purchase",
         order_id: order.id,
         handler: function (response: any) {
-          toast({ 
-            title: 'Payment Successful', 
-            description: 'Your order has been placed successfully.' 
-          });
+          toast({ title: 'Payment Success', description: 'Your order is confirmed!' });
           clearCart();
           router.push('/');
         },
@@ -126,50 +121,42 @@ export function CheckoutForm() {
           email: formData.email,
           contact: formData.phone,
         },
-        notes: {
-          address: `${formData.address}, ${formData.city} - ${formData.zip}`
-        },
-        theme: {
-          color: "#40000A", // Signature Maroon
-        },
+        theme: { color: "#40000A" },
         modal: {
-          ondismiss: function() {
-            setIsProcessing(false);
-          }
+          ondismiss: () => setIsProcessing(false)
         }
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
+      rzp.on('payment.failed', function (resp: any) {
         setIsProcessing(false);
-        toast({ 
-          variant: 'destructive', 
-          title: 'Payment Failed', 
-          description: response.error.description 
-        });
+        setError(resp.error.description);
+        toast({ variant: 'destructive', title: 'Payment Failed', description: resp.error.description });
       });
       rzp.open();
     } catch (err: any) {
       setIsProcessing(false);
-      console.error('Checkout Error:', err);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Order Initialization Failed', 
-        description: err.message || 'Check your internet connection or try again later.'
-      });
+      setError(err.message);
+      console.error('Checkout error:', err);
     }
   };
 
   if (cartCount === 0) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-4xl mx-auto py-8">
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground p-8">
-          <CardTitle className="font-headline text-3xl">Shipping Details</CardTitle>
-          <CardDescription className="text-primary-foreground/70">Where should we deliver your heritage piece?</CardDescription>
+          <CardTitle className="font-headline text-3xl">Shipping & Payment</CardTitle>
+          <CardDescription className="text-primary-foreground/70">Securely finalize your acquisition.</CardDescription>
         </CardHeader>
         <CardContent className="p-8">
+          {error && (
+            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-center gap-3 text-sm font-bold">
+              <AlertCircle className="h-5 w-5" /> {error}
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handlePayment)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -184,7 +171,7 @@ export function CheckoutForm() {
                 <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input placeholder="+91" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField name="address" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Delivery Address</FormLabel><FormControl><Input {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
               )} />
               <div className="grid grid-cols-2 gap-6">
                 <FormField name="city" control={form.control} render={({ field }) => (
@@ -197,13 +184,13 @@ export function CheckoutForm() {
 
               <Separator className="my-8" />
 
-              <div className="bg-muted/30 p-6 rounded-3xl space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Order Total ({cartCount} items)</span>
-                  <span className="text-2xl font-black text-primary">INR {cartTotal.toFixed(2)}</span>
+              <div className="bg-muted/30 p-6 rounded-3xl flex justify-between items-center">
+                <div className="space-y-1">
+                  <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Total Payable</span>
+                  <div className="text-3xl font-black text-primary">INR {cartTotal.toFixed(2)}</div>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600">
-                  <ShieldCheck className="h-4 w-4" /> Secure Payment via Razorpay
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+                  <ShieldCheck className="h-4 w-4" /> Secure via Razorpay
                 </div>
               </div>
 
@@ -214,11 +201,11 @@ export function CheckoutForm() {
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Preparing Payment...
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Preparing Checkout...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="mr-2 h-6 w-6" /> Proceed to Pay
+                    <CreditCard className="mr-2 h-6 w-6" /> Acquire Now
                   </>
                 )}
               </Button>

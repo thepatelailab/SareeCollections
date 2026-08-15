@@ -32,7 +32,6 @@ try:
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
         else:
-            # Fallback for Cloud Run with attached service account
             firebase_admin.initialize_app()
 except Exception as e:
     print(f"Error initializing Firebase: {e}")
@@ -41,13 +40,13 @@ db = firestore.Client()
 
 app = FastAPI(title="SareeDukan Payment API")
 
-# Configure CORS - Explicitly allow common frontend headers
+# Configure CORS - Broadly allow for development and production
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_methods=["*"], 
+    allow_headers=["*"],
 )
 
 # --- Pydantic Models ---
@@ -60,9 +59,6 @@ class CreateOrderRequest(BaseModel):
 # --- Helper Functions ---
 
 def process_successful_payment(user_id: str, amount_paise: int, payment_id: str, order_id: str):
-    """
-    Updates the order status in Firestore after successful payment.
-    """
     order_ref = db.collection("orders").document(order_id)
     
     transaction_data = {
@@ -86,11 +82,7 @@ async def root():
     return {
         "message": "SareeDukan Payment API is live",
         "status": "online",
-        "endpoints": {
-            "create_order": "/create-order (POST)",
-            "webhook": "/webhook (POST)",
-            "health": "/health (GET)"
-        }
+        "endpoints": ["/create-order", "/webhook", "/health"]
     }
 
 @app.post("/create-order")
@@ -99,20 +91,17 @@ async def create_order(data: CreateOrderRequest):
         raise HTTPException(status_code=500, detail="Razorpay not configured on server (Missing API Keys)")
     
     try:
-        # 1. Create Order in Razorpay
         receipt_id = f"rcpt_{int(datetime.now(timezone.utc).timestamp())}_{data.user_id[:5]}"
         order_params = {
             "amount": data.amount,
             "currency": "INR",
             "receipt": receipt_id,
             "notes": {
-                "user_id": data.user_id,
-                "item_count": len(data.items)
+                "user_id": data.user_id
             }
         }
         order = razorpay_client.order.create(order_params)
         
-        # 2. Pre-create the order record in Firestore
         db.collection("orders").document(order["id"]).set({
             "order_id": order["id"],
             "user_id": data.user_id,
