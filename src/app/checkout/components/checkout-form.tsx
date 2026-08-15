@@ -30,8 +30,8 @@ const checkoutSchema = z.object({
   zip: z.string().min(4, 'ZIP code is required'),
 });
 
-// Use environment variable for the API base URL
-const RAZORPAY_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+// Environment variables check
+const RAZORPAY_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
 const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_id'; 
 
 declare global {
@@ -60,11 +60,12 @@ export function CheckoutForm() {
   });
 
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
+    // 0. Ensure SDK is ready
     if (!window.Razorpay) {
       toast({ 
         variant: 'destructive', 
         title: 'Payment Error', 
-        description: 'Razorpay SDK failed to load. Please check your internet connection.' 
+        description: 'Payment gateway is still loading. Please wait a few seconds and try again.' 
       });
       return;
     }
@@ -73,9 +74,13 @@ export function CheckoutForm() {
 
     try {
       // 1. Create order on your Cloud Run backend
+      console.log(`Initiating order creation at: ${RAZORPAY_API_BASE}/create-order`);
       const response = await fetch(`${RAZORPAY_API_BASE}/create-order`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           amount: Math.round(cartTotal * 100), // convert to paise
           user_id: user?.uid,
@@ -84,11 +89,21 @@ export function CheckoutForm() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to initiate order');
+        let errorMessage = 'Failed to initiate order';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (e) {
+          errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const order = await response.json();
+
+      if (!order.id) {
+        throw new Error('Invalid order response from server');
+      }
 
       // 2. Open Razorpay Modal
       const options = {
@@ -117,10 +132,16 @@ export function CheckoutForm() {
         theme: {
           color: "#40000A", // Signature Maroon
         },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(false);
+          }
+        }
       };
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
+        setIsProcessing(false);
         toast({ 
           variant: 'destructive', 
           title: 'Payment Failed', 
@@ -129,13 +150,13 @@ export function CheckoutForm() {
       });
       rzp.open();
     } catch (err: any) {
+      setIsProcessing(false);
+      console.error('Checkout Error:', err);
       toast({ 
         variant: 'destructive', 
         title: 'Order Initialization Failed', 
-        description: err.message 
+        description: err.message || 'Check your internet connection or try again later.'
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 

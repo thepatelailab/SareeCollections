@@ -41,13 +41,13 @@ db = firestore.Client()
 
 app = FastAPI(title="SareeDukan Payment API")
 
-# Configure CORS
+# Configure CORS - Explicitly allow common frontend headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with your frontend URL
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # --- Pydantic Models ---
@@ -85,6 +85,7 @@ def process_successful_payment(user_id: str, amount_paise: int, payment_id: str,
 async def root():
     return {
         "message": "SareeDukan Payment API is live",
+        "status": "online",
         "endpoints": {
             "create_order": "/create-order (POST)",
             "webhook": "/webhook (POST)",
@@ -95,7 +96,7 @@ async def root():
 @app.post("/create-order")
 async def create_order(data: CreateOrderRequest):
     if not razorpay_client:
-        raise HTTPException(status_code=500, detail="Razorpay not configured on server")
+        raise HTTPException(status_code=500, detail="Razorpay not configured on server (Missing API Keys)")
     
     try:
         # 1. Create Order in Razorpay
@@ -128,6 +129,10 @@ async def create_order(data: CreateOrderRequest):
         print(f"Order creation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/webhook")
+async def webhook_info():
+    return {"message": "Webhook endpoint is active. Use POST requests for Razorpay events."}
+
 @app.post("/webhook")
 async def webhook(request: Request):
     if not RAZORPAY_WEBHOOK_SECRET:
@@ -135,6 +140,9 @@ async def webhook(request: Request):
         
     body = await request.body()
     received_signature = request.headers.get("X-Razorpay-Signature")
+
+    if not received_signature:
+        raise HTTPException(status_code=400, detail="Signature missing")
 
     try:
         razorpay_client.utility.verify_webhook_signature(
@@ -159,7 +167,7 @@ async def webhook(request: Request):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
 
 if __name__ == "__main__":
     import uvicorn
