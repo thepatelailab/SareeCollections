@@ -32,12 +32,14 @@ const checkoutSchema = z.object({
 
 // Helper to get clean base URL
 const getApiBase = () => {
-  let url = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
-  // Remove trailing slashes and common path segments if accidentally included
-  return url.replace(/\/+$/, '').replace(/\/webhook$/, '').replace(/\/create-order$/, '');
+  let url = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  if (!url) return 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+  
+  // Strip common trailing segments to get the clean root URL
+  return url.replace(/\/+$/, '').split('/webhook')[0].split('/create-order')[0].split('/razorpay')[0];
 };
 
-const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_id'; 
+const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
 declare global {
   interface Window {
@@ -66,11 +68,16 @@ export function CheckoutForm() {
   });
 
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
+    if (!RAZORPAY_KEY_ID || RAZORPAY_KEY_ID.includes('your_key_id')) {
+      setError("Razorpay Key ID is missing in frontend configuration. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID.");
+      return;
+    }
+
     if (!window.Razorpay) {
       toast({ 
         variant: 'destructive', 
         title: 'Payment Error', 
-        description: 'Razorpay SDK not loaded. Refreshing page might help.' 
+        description: 'Razorpay SDK not loaded. Please wait a moment and try again.' 
       });
       return;
     }
@@ -82,7 +89,7 @@ export function CheckoutForm() {
       const apiBase = getApiBase();
       const orderEndpoint = `${apiBase}/create-order`;
       
-      console.log('Initiating payment at:', orderEndpoint);
+      console.log('Fetching order from:', orderEndpoint);
       
       const response = await fetch(orderEndpoint, {
         method: 'POST',
@@ -91,15 +98,15 @@ export function CheckoutForm() {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          amount: Math.round(cartTotal * 100),
+          amount: Math.round(cartTotal * 100), // convert to paise
           user_id: user?.uid,
           items: cartItems.map(i => i.name),
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Order creation failed: ${errorText || response.statusText}`);
+        const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(errorData.detail || 'Failed to create order on server');
       }
 
       const order = await response.json();
@@ -109,10 +116,11 @@ export function CheckoutForm() {
         amount: order.amount,
         currency: order.currency,
         name: "SareeDukan.Com",
-        description: "Heritage Handloom Purchase",
+        description: "Heritage Handloom Acquisition",
+        image: "/SareeDukan.png",
         order_id: order.id,
         handler: function (response: any) {
-          toast({ title: 'Payment Success', description: 'Your order is confirmed!' });
+          toast({ title: 'Payment Confirmed', description: 'Your order has been placed successfully.' });
           clearCart();
           router.push('/');
         },
@@ -131,12 +139,11 @@ export function CheckoutForm() {
       rzp.on('payment.failed', function (resp: any) {
         setIsProcessing(false);
         setError(resp.error.description);
-        toast({ variant: 'destructive', title: 'Payment Failed', description: resp.error.description });
       });
       rzp.open();
     } catch (err: any) {
       setIsProcessing(false);
-      setError(err.message);
+      setError(err.message || "An error occurred during checkout initialization.");
       console.error('Checkout error:', err);
     }
   };
@@ -152,8 +159,12 @@ export function CheckoutForm() {
         </CardHeader>
         <CardContent className="p-8">
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-center gap-3 text-sm font-bold">
-              <AlertCircle className="h-5 w-5" /> {error}
+            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p>{error}</p>
+                <p className="text-[10px] mt-1 opacity-70">Check console for detailed logs.</p>
+              </div>
             </div>
           )}
 
