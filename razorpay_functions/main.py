@@ -53,7 +53,7 @@ app.add_middleware(
 # --- Pydantic Models ---
 
 class CreateOrderRequest(BaseModel):
-    amount: int = Field(..., ge=100) # Amount in paise (Min 1 INR)
+    amount: int = Field(..., ge=100) # Amount in paise
     user_id: str
     items: list[str] = []
 
@@ -80,6 +80,17 @@ def process_successful_payment(user_id: str, amount_paise: int, payment_id: str,
         return False
 
 # --- Endpoints ---
+
+@app.get("/")
+async def root():
+    return {
+        "message": "SareeDukan Payment API is live",
+        "endpoints": {
+            "create_order": "/create-order (POST)",
+            "webhook": "/webhook (POST)",
+            "health": "/health (GET)"
+        }
+    }
 
 @app.post("/create-order")
 async def create_order(data: CreateOrderRequest):

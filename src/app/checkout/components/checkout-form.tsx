@@ -30,9 +30,9 @@ const checkoutSchema = z.object({
   zip: z.string().min(4, 'ZIP code is required'),
 });
 
-// IMPORTANT: Update these with your Cloud Run URL and Razorpay Key ID
-const RAZORPAY_API_BASE = 'https://razorpay-webapi-your-id.a.run.app';
-const RAZORPAY_KEY_ID = 'rzp_test_your_key_id'; 
+// Use environment variable for the API base URL
+const RAZORPAY_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
+const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_id'; 
 
 declare global {
   interface Window {
