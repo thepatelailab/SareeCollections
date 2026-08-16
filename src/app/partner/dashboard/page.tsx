@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where } from 'firebase/firestore';
 import { Product, Order } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
