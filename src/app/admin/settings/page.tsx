@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -9,11 +10,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HeroSettings } from './components/hero-settings';
 import { LocationDiscovery } from './components/location-discovery';
 import { EmailSettings } from './components/email-settings';
-import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, UserCheck, Mail } from 'lucide-react';
+import { ActivityTracker } from './components/activity-tracker';
+import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, BarChart3 } from 'lucide-react';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { WholesalerRequest } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
@@ -58,19 +60,22 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-8">
       <div className="flex items-center gap-4">
         <div className="bg-primary/10 p-3 rounded-lg">
           <Settings className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl md:text-4xl font-headline text-primary">Admin Control Center</h1>
-          <p className="text-muted-foreground">Manage store appearance, partners, and automation.</p>
+          <h1 className="text-3xl md:text-4xl font-headline text-primary">Master Control Center</h1>
+          <p className="text-muted-foreground">Manage store operations, analytics, and automation.</p>
         </div>
       </div>
 
-      <Tabs defaultValue="appearance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
+      <Tabs defaultValue="activity" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[900px]">
+          <TabsTrigger value="activity" className="flex items-center gap-2 text-xs">
+            <BarChart3 className="h-4 w-4" /> Activity
+          </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2 text-xs">
             <ImageIcon className="h-4 w-4" /> Appearance
           </TabsTrigger>
@@ -81,9 +86,13 @@ export default function AdminSettingsPage() {
             <Handshake className="h-4 w-4" /> Partners
           </TabsTrigger>
           <TabsTrigger value="email" className="flex items-center gap-2 text-xs">
-            <Mail className="h-4 w-4" /> Email Settings
+            <Mail className="h-4 w-4" /> Notifications
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="activity">
+          <ActivityTracker />
+        </TabsContent>
 
         <TabsContent value="appearance">
           <HeroSettings />

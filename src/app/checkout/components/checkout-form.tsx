@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -5,9 +6,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCartContext } from '@/components/providers/cart-provider';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -18,8 +19,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
+import { sendOrderEmails } from '@/app/actions/email-actions';
+import { doc, getDoc } from 'firebase/firestore';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -42,8 +44,9 @@ declare global {
 }
 
 export function CheckoutForm() {
-  const { clearCart, cartTotal, cartCount, cartItems } = useCartContext();
+  const { clearCart, cartTotal, cartItems } = useCartContext();
   const { user } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -83,7 +86,7 @@ export function CheckoutForm() {
     const activeKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || discoveredKey;
 
     if (!activeKey) {
-      setError("Razorpay Configuration Missing. Check API discovery.");
+      setError("Razorpay Configuration Missing.");
       return;
     }
 
@@ -123,8 +126,24 @@ export function CheckoutForm() {
         currency: order.currency,
         name: "SareeDukan.Com",
         order_id: order.id,
-        handler: function () {
-          toast({ title: 'Success!', description: 'Confirmation email sent.' });
+        handler: async function () {
+          // Trigger Emails via Server Action
+          if (firestore) {
+             const settings = await getDoc(doc(firestore, 'settings', 'email'));
+             const senderEmail = settings.exists() ? settings.data().verifiedEmail : 'onboarding@resend.dev';
+             
+             await sendOrderEmails({
+                buyerEmail: formData.email,
+                buyerName: formData.name,
+                orderId: order.id,
+                amount: cartTotal,
+                items: cartItems,
+                shippingDetails: formData,
+                senderEmail: senderEmail
+             });
+          }
+
+          toast({ title: 'Success!', description: 'Order confirmed and emails sent.' });
           clearCart();
           router.push('/');
         },
@@ -149,7 +168,7 @@ export function CheckoutForm() {
     <div className="max-w-4xl mx-auto py-8">
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground p-8">
-          <CardTitle className="font-headline text-3xl">Shipping & Payment</CardTitle>
+          <CardTitle className="font-headline text-3xl text-center">Checkout</CardTitle>
         </CardHeader>
         <CardContent className="p-8">
           {error && (
