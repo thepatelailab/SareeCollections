@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2 } from 'lucide-react';
+import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from './providers/cart-provider';
@@ -151,8 +150,15 @@ export function ProductDetails({ product }: ProductDetailsProps) {
 
         {/* Product Information */}
         <div className="flex flex-col gap-8 py-4">
-          <div>
+          <div className="space-y-4">
             <h1 className="text-4xl md:text-6xl font-headline text-primary mb-2 leading-[1.1]">{product.name}</h1>
+            {product.ownerId && (
+              <Button variant="link" asChild className="p-0 h-auto text-accent-foreground font-black uppercase tracking-[0.2em] text-[10px] hover:text-primary">
+                <Link href={`/partners/${product.ownerId}`} className="flex items-center gap-2">
+                  <Store className="h-4 w-4" /> Visit Partner Boutique
+                </Link>
+              </Button>
+            )}
             <p className="text-lg md:text-xl text-muted-foreground italic font-body">Heritage {product.variety} Collection</p>
           </div>
 

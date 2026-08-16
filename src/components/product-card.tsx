@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Share2 } from 'lucide-react';
+import { ShoppingBag, Heart, Share2, Store } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import {
   Card,
@@ -197,6 +196,15 @@ export function ProductCard({ product }: ProductCardProps) {
             <CardTitle className="font-headline text-2xl leading-tight text-primary">
               {product.name}
             </CardTitle>
+            {product.ownerId && (
+              <Link 
+                href={`/partners/${product.ownerId}`}
+                className="inline-flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-accent-foreground mt-2 hover:text-primary transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Store className="h-3 w-3" /> Partner Boutique
+              </Link>
+            )}
             <CardDescription className="pt-2 text-[10px] italic uppercase tracking-[0.2em] font-black opacity-50">
               Heritage Handloom Collection
             </CardDescription>

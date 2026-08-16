@@ -1,25 +1,27 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
 import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck } from 'lucide-react';
+import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck, Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/firebase';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
   const { isWholesaler } = useAppContext();
   const router = useRouter();
   const auth = useAuth();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !isWholesaler) {
@@ -31,6 +33,16 @@ export default function PartnerDashboardPage() {
     if (auth) {
       signOut(auth);
       router.push('/');
+    }
+  };
+
+  const copyBoutiqueLink = () => {
+    if (typeof window !== 'undefined' && user?.uid) {
+      const link = `${window.location.origin}/partners/${user.uid}`;
+      navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast({ title: 'Boutique Link Copied!', description: 'Share this link on your WhatsApp or Instagram bio.' });
+      setTimeout(() => setCopied(false), 3000);
     }
   };
 
@@ -67,11 +79,42 @@ export default function PartnerDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={Package} label="Active Listings" value="12" color="text-blue-600" />
-        <StatCard icon={TrendingUp} label="Wholesale Sales" value="INR 45,200" color="text-green-600" />
-        <StatCard icon={Store} label="Store Views" value="842" color="text-orange-600" />
-        <StatCard icon={Handshake} label="Active Orders" value="3" color="text-purple-600" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Campaign Toolcard */}
+        <Card className="md:col-span-2 rounded-[2rem] border-primary/10 bg-accent/5 overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+            <Share2 className="h-24 w-24 text-primary" />
+          </div>
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl text-primary">Heritage Social Campaign</CardTitle>
+            <CardDescription>Share your unique boutique profile with global buyers to drive direct wholesale orders.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-primary/5 shadow-inner">
+               <div className="flex-1 truncate text-xs font-mono text-muted-foreground">
+                 {typeof window !== 'undefined' ? `${window.location.origin}/partners/${user?.uid}` : '...'}
+               </div>
+               <Button onClick={copyBoutiqueLink} variant={copied ? "default" : "secondary"} className="rounded-xl px-6 h-12">
+                 {copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5 mr-2" />}
+                 {copied ? "Copied" : "Copy Link"}
+               </Button>
+            </div>
+            <div className="flex gap-4">
+              <Badge variant="outline" className="px-3 py-1.5 border-primary/10 text-[9px] font-black uppercase tracking-widest text-primary/60">
+                Instagram Bio Ready
+              </Badge>
+               <Badge variant="outline" className="px-3 py-1.5 border-primary/10 text-[9px] font-black uppercase tracking-widest text-primary/60">
+                WhatsApp Status Ready
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2rem] border-primary/5 shadow-md flex flex-col justify-center items-center text-center p-8 bg-primary text-primary-foreground">
+           <TrendingUp className="h-12 w-12 mb-4 text-accent" />
+           <h3 className="text-4xl font-black mb-1">INR 45,200</h3>
+           <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">Wholesale Sales</p>
+        </Card>
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-6">
@@ -85,16 +128,10 @@ export default function PartnerDashboardPage() {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-6">
-          <div className="flex justify-between items-center border-b pb-4">
-            <h2 className="text-2xl font-headline text-primary">Your Collection</h2>
-          </div>
           <PartnerInventory />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-6">
-          <div className="flex justify-between items-center border-b pb-4">
-            <h2 className="text-2xl font-headline text-primary">Order Fulfilment</h2>
-          </div>
           <PartnerOrders />
         </TabsContent>
       </Tabs>
