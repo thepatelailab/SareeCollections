@@ -8,15 +8,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
 import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck, Share2, Copy, CheckCircle2, Heart, Award, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Store, Package, TrendingUp, LogOut, Truck, Copy, CheckCircle2, Heart, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where } from 'firebase/firestore';
 import { Product, Order } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
 
 const FacebookIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" className="h-4 w-4 fill-current">
@@ -64,7 +63,7 @@ export default function PartnerDashboardPage() {
     if (link) {
       navigator.clipboard.writeText(link);
       setCopied(true);
-      toast({ title: 'Boutique Link Copied!', description: 'Share this link on your WhatsApp or Instagram bio.' });
+      toast({ title: 'Boutique Link Copied!', description: 'Share this link on your social media bios.' });
       setTimeout(() => setCopied(false), 3000);
     }
   };
@@ -81,7 +80,6 @@ export default function PartnerDashboardPage() {
     }
   };
 
-  // Competition Metrics Fetching
   const myProductsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(collection(firestore, 'SareeCollection'), where('ownerId', '==', user.uid));
@@ -121,27 +119,58 @@ export default function PartnerDashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl space-y-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      {/* Header with Quick Share */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-3 rounded-2xl text-white shadow-xl">
             <LayoutDashboard className="h-8 w-8" />
           </div>
           <div>
             <h1 className="text-3xl md:text-5xl font-headline text-primary">Wholesale Center</h1>
-            <p className="text-muted-foreground font-medium italic">Partner Account: {user?.email}</p>
+            <p className="text-muted-foreground font-medium italic text-xs">Partner Account: {user?.email}</p>
           </div>
         </div>
         
-        <div className="flex gap-3 w-full md:w-auto">
-          <WholesalerAddSareeDialog />
-          <Button variant="outline" size="icon" onClick={handleLogout} className="rounded-full h-12 w-12 border-primary/10 hover:bg-destructive/5 hover:border-destructive/20">
-            <LogOut className="h-5 w-5 text-destructive" />
-          </Button>
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          {/* Compact Share Controls */}
+          <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-primary/5 shadow-sm">
+             <Button 
+              variant="outline" 
+              className="h-10 w-10 rounded-xl border-primary/5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 p-0"
+              onClick={() => handleSocialShare('whatsapp')}
+             >
+               <WhatsAppIcon />
+             </Button>
+             <Button 
+              variant="outline" 
+              className="h-10 w-10 rounded-xl border-primary/5 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 p-0"
+              onClick={() => handleSocialShare('facebook')}
+             >
+               <FacebookIcon />
+             </Button>
+             <Button 
+              onClick={copyBoutiqueLink} 
+              variant={copied ? "default" : "secondary"} 
+              className="rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+             >
+               {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+               {copied ? "Copied" : "Copy URL"}
+             </Button>
+          </div>
+
+          <div className="h-10 w-px bg-primary/10 mx-1 hidden lg:block" />
+
+          <div className="flex gap-2">
+            <WholesalerAddSareeDialog />
+            <Button variant="outline" size="icon" onClick={handleLogout} className="rounded-full h-12 w-12 border-primary/10 hover:bg-destructive/5 hover:border-destructive/20">
+              <LogOut className="h-5 w-5 text-destructive" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Heritage Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <StatCard 
           icon={TrendingUp} 
           label="Total Revenue" 
@@ -160,68 +189,10 @@ export default function PartnerDashboardPage() {
           value={products?.length.toString() || '0'} 
           color="text-blue-600" 
         />
-        <Card className="rounded-[2rem] border-primary/5 shadow-md flex flex-col justify-center items-center text-center p-6 bg-accent text-accent-foreground">
-           <Award className="h-8 w-8 mb-2" />
+        <Card className="rounded-[2rem] border-primary/5 shadow-md flex flex-col justify-center items-center text-center p-6 bg-primary text-primary-foreground">
+           <Award className="h-8 w-8 mb-2 text-accent" />
            <h3 className="text-xl font-black uppercase tracking-widest">Elite Tier</h3>
-           <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">Partner Level</p>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Compact Share Card */}
-        <Card className="md:col-span-2 rounded-[2.5rem] border-primary/10 bg-white shadow-xl overflow-hidden">
-          <div className="p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-2 text-center md:text-left">
-              <h3 className="font-headline text-3xl text-primary">Grow Boutique</h3>
-              <p className="text-xs text-muted-foreground font-medium">Share your heritage link to attract global buyers.</p>
-            </div>
-            
-            <div className="flex flex-wrap items-center justify-center gap-3">
-               <Button 
-                variant="outline" 
-                className="h-12 w-12 rounded-2xl border-primary/5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20"
-                onClick={() => handleSocialShare('whatsapp')}
-               >
-                 <WhatsAppIcon />
-               </Button>
-               <Button 
-                variant="outline" 
-                className="h-12 w-12 rounded-2xl border-primary/5 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20"
-                onClick={() => handleSocialShare('facebook')}
-               >
-                 <FacebookIcon />
-               </Button>
-               <Button 
-                onClick={copyBoutiqueLink} 
-                variant={copied ? "default" : "secondary"} 
-                className="rounded-2xl h-12 px-6 font-headline flex items-center gap-2"
-               >
-                 {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                 {copied ? "Link Copied" : "Copy Boutique URL"}
-               </Button>
-            </div>
-          </div>
-          <div className="bg-muted/30 px-8 py-3 flex gap-4 overflow-hidden border-t border-primary/5">
-            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Optimized for:</span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">WhatsApp</span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">Instagram Bio</span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">FB Groups</span>
-          </div>
-        </Card>
-
-        {/* Heritage Leaderboard Card */}
-        <Card className="bg-primary rounded-[2.5rem] p-8 text-primary-foreground flex flex-col justify-between shadow-2xl relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-             <Award className="h-24 w-24" />
-           </div>
-           <div className="space-y-4 relative z-10">
-             <div className="h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center"><TrendingUp className="h-5 w-5" /></div>
-             <h3 className="text-2xl font-headline">Leaderboard</h3>
-             <p className="text-xs opacity-70 leading-relaxed">Boost hearts to get featured globally.</p>
-           </div>
-           <Button variant="outline" className="mt-6 h-12 rounded-xl bg-white/10 border-white/20 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest">
-             Full Rankings
-           </Button>
+           <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">Verified Partner</p>
         </Card>
       </div>
 
