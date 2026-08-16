@@ -17,9 +17,10 @@ import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
 import { Product, Order, UserProfile } from '@/lib/types';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 const FacebookIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" className="h-4 w-4 fill-current">
@@ -35,7 +36,7 @@ const WhatsAppIcon = () => (
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
-  const { storage, firestore, auth } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { isWholesaler, refetchUserProfile } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -116,29 +117,44 @@ export default function PartnerDashboardPage() {
   };
 
   const handleUpdateBoutique = async () => {
-    if (!firestore || !user?.uid || !storage) return;
+    // Explicitly check for user and firestore availability
+    if (!firestore || !user?.uid) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Authentication not ready.' });
+      return;
+    }
+
     setIsUpdatingProfile(true);
     try {
       let bannerUrl = bannerPreview;
 
+      // Handle image upload if a file is selected
       if (bannerFile) {
+        const storage = getStorage(); // Direct SDK call
         const bannerRef = ref(storage, `users/${user.uid}/banner.jpg`);
         const uploadSnapshot = await uploadBytes(bannerRef, bannerFile);
         bannerUrl = await getDownloadURL(uploadSnapshot.ref);
       }
 
+      // Update Firestore document with merge: true to avoid overwriting other fields
       await setDoc(doc(firestore, 'users', user.uid), {
-        businessName,
+        businessName: businessName.trim(),
         bannerUrl,
         role: 'wholesaler',
         updatedAt: serverTimestamp()
       }, { merge: true });
 
+      // Refresh global context profile
       await refetchUserProfile();
-      toast({ title: 'Boutique Updated', description: 'Your public storefront has been updated.' });
-    } catch (e) {
-      console.error("Boutique Update Error:", e);
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Check your internet connection and try again.' });
+      
+      toast({ title: 'Boutique Updated', description: 'Your public storefront has been successfully updated.' });
+      setBannerFile(null); // Clear selected file after success
+    } catch (e: any) {
+      console.error("Boutique Update Error Detailed:", e);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Update Failed', 
+        description: e.message || 'Check your internet connection and permissions.' 
+      });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -307,9 +323,9 @@ export default function PartnerDashboardPage() {
                     <Button 
                       onClick={handleUpdateBoutique} 
                       disabled={isUpdatingProfile} 
-                      className="w-full h-14 rounded-2xl shadow-lg"
+                      className="w-full h-14 rounded-2xl shadow-lg bg-primary"
                     >
-                      {isUpdatingProfile ? <Loader2 className="animate-spin" /> : 'Save Boutique Changes'}
+                      {isUpdatingProfile ? <Loader2 className="animate-spin h-5 w-5" /> : 'Save Boutique Changes'}
                     </Button>
                   </div>
                 </div>

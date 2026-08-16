@@ -5,8 +5,6 @@ service cloud.firestore {
     match /SareeCollection/{sareeId} {
       allow get, list: if true;
       allow create, delete: if isAdmin() || isWholesaler();
-      // Allow any user to update ONLY the 'likes' and 'shares' metrics
-      // Wholesalers can update their own products
       allow update: if isAdmin() || 
                     (isWholesaler() && request.auth.uid == resource.data.ownerId) ||
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares']));
@@ -20,7 +18,7 @@ service cloud.firestore {
     }
 
     match /wholesalerRequests/{requestId} {
-      allow create: if true; // Anyone can apply
+      allow create: if true;
       allow get, list, update, delete: if isAdmin();
     }
 
@@ -45,7 +43,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      // Explicitly allow users to read and write their own profile data
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     function isSignedIn() {
