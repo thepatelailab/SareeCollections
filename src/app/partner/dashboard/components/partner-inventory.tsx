@@ -6,11 +6,12 @@ import { Product } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, ExternalLink, Package, IndianRupee, Eye } from 'lucide-react';
+import { Trash2, ExternalLink, Package, IndianRupee, Eye } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SocialCampaignDialog } from './social-campaign-dialog';
 
 export function PartnerInventory() {
   const { user } = useUser();
@@ -96,20 +97,24 @@ export function PartnerInventory() {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1 rounded-full text-[10px] font-black uppercase" asChild>
-                <Link href={`/products/${product.id}`} target="_blank">
-                  <Eye className="h-3 w-3 mr-2" /> View Live
-                </Link>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="rounded-full text-destructive border-destructive/20 hover:bg-destructive/5"
-                onClick={() => handleDelete(product.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1 rounded-full text-[10px] font-black uppercase" asChild>
+                  <Link href={`/products/${product.id}`} target="_blank">
+                    <Eye className="h-3 w-3 mr-2" /> View Live
+                  </Link>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="rounded-full text-destructive border-destructive/20 hover:bg-destructive/5"
+                  onClick={() => handleDelete(product.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <SocialCampaignDialog product={product} />
             </div>
           </CardContent>
         </Card>
