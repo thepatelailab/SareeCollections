@@ -30,7 +30,6 @@ const checkoutSchema = z.object({
   zip: z.string().min(4, 'ZIP code is required'),
 });
 
-// Helper to get clean base URL
 const getApiBase = () => {
   let url = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sareedukan-api-nx42xir6fq-uc.a.run.app';
   return url.replace(/\/+$/, '').split('/webhook')[0].split('/create-order')[0];
@@ -52,7 +51,6 @@ export function CheckoutForm() {
   const [discoveredKey, setDiscoveredKey] = useState<string | null>(null);
 
   useEffect(() => {
-    // Discovery logic: if NEXT_PUBLIC_RAZORPAY_KEY_ID is missing, fetch it from backend
     const fetchConfig = async () => {
       try {
         const response = await fetch(getApiBase());
@@ -63,7 +61,7 @@ export function CheckoutForm() {
           }
         }
       } catch (err) {
-        console.warn('API Config discovery failed, relying on env vars.');
+        console.warn('API Config discovery failed.');
       }
     };
     fetchConfig();
@@ -84,17 +82,13 @@ export function CheckoutForm() {
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
     const activeKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || discoveredKey;
 
-    if (!activeKey || activeKey.includes('your_key_id')) {
-      setError("Razorpay Key ID missing. Ensure RAZORPAY_KEY_ID is set in Cloud Run and the API is reachable.");
+    if (!activeKey) {
+      setError("Razorpay Configuration Missing. Check API discovery.");
       return;
     }
 
     if (!window.Razorpay) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Payment Error', 
-        description: 'Razorpay SDK not loaded. Please try again.' 
-      });
+      toast({ variant: 'destructive', title: 'Payment Error', description: 'SDK not loaded.' });
       return;
     }
 
@@ -109,14 +103,17 @@ export function CheckoutForm() {
         body: JSON.stringify({
           amount: Math.round(cartTotal * 100),
           user_id: user?.uid,
-          items: cartItems.map(i => i.name),
+          items: cartItems.map(i => ({
+            id: i.id,
+            name: i.name,
+            ownerId: i.ownerId,
+            price: i.price
+          })),
+          shipping_details: formData,
         }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ detail: 'Backend Error' }));
-        throw new Error(errData.detail || 'Failed to create order');
-      }
+      if (!response.ok) throw new Error('Failed to create order');
 
       const order = await response.json();
 
@@ -125,10 +122,9 @@ export function CheckoutForm() {
         amount: order.amount,
         currency: order.currency,
         name: "SareeDukan.Com",
-        description: "Heritage Handloom Acquisition",
         order_id: order.id,
-        handler: function (response: any) {
-          toast({ title: 'Success!', description: 'Your masterpiece is on its way.' });
+        handler: function () {
+          toast({ title: 'Success!', description: 'Confirmation email sent.' });
           clearCart();
           router.push('/');
         },
@@ -138,31 +134,22 @@ export function CheckoutForm() {
           contact: formData.phone,
         },
         theme: { color: "#40000A" },
-        modal: {
-          ondismiss: () => setIsProcessing(false)
-        }
+        modal: { ondismiss: () => setIsProcessing(false) }
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', (resp: any) => {
-        setIsProcessing(false);
-        setError(resp.error.description);
-      });
       rzp.open();
     } catch (err: any) {
       setIsProcessing(false);
-      setError(err.message || "Checkout failed to initialize.");
+      setError(err.message || "Checkout failed.");
     }
   };
-
-  if (cartCount === 0) return null;
 
   return (
     <div className="max-w-4xl mx-auto py-8">
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground p-8">
           <CardTitle className="font-headline text-3xl">Shipping & Payment</CardTitle>
-          <CardDescription className="text-primary-foreground/70">Finalize your heritage acquisition.</CardDescription>
         </CardHeader>
         <CardContent className="p-8">
           {error && (
@@ -198,10 +185,7 @@ export function CheckoutForm() {
               </div>
 
               <div className="bg-muted/30 p-6 rounded-3xl flex justify-between items-center mt-8">
-                <div className="space-y-1">
-                  <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Total Amount</span>
-                  <div className="text-3xl font-black text-primary">INR {cartTotal.toFixed(2)}</div>
-                </div>
+                <div className="text-3xl font-black text-primary">INR {cartTotal.toFixed(2)}</div>
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                   <ShieldCheck className="h-4 w-4" /> Secure via Razorpay
                 </div>
@@ -209,7 +193,7 @@ export function CheckoutForm() {
 
               <Button 
                 type="submit" 
-                className="w-full py-8 text-xl font-headline bg-primary hover:bg-primary/90 rounded-2xl shadow-xl" 
+                className="w-full py-8 text-xl font-headline bg-primary rounded-2xl shadow-xl" 
                 disabled={isProcessing}
               >
                 {isProcessing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <><CreditCard className="mr-2 h-6 w-6" /> Acquire Now</>}

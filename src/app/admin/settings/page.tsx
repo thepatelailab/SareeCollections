@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -9,7 +8,8 @@ import { useAppContext } from '@/components/providers/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HeroSettings } from './components/hero-settings';
 import { LocationDiscovery } from './components/location-discovery';
-import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, UserCheck } from 'lucide-react';
+import { EmailSettings } from './components/email-settings';
+import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, UserCheck, Mail } from 'lucide-react';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { WholesalerRequest } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,6 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
 
   const requestsQuery = useMemoFirebase(() => {
-    // CRITICAL: Only initiate query if we have confirmed the user is an admin.
-    // This prevents "insufficient permissions" errors on the first login.
     if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'wholesalerRequests'), orderBy('createdAt', 'desc'));
   }, [firestore, isAdmin]);
@@ -44,13 +42,7 @@ export default function AdminSettingsPage() {
     try {
       const docRef = doc(firestore, 'wholesalerRequests', request.id);
       await updateDoc(docRef, { status });
-      
-      toast({ 
-        title: `Partner ${status}`, 
-        description: status === 'approved' 
-          ? `Application approved. Wholesaler can now sign up using ${request.email}.`
-          : `Application has been rejected.`
-      });
+      toast({ title: `Partner ${status}` });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update Failed' });
     }
@@ -73,12 +65,12 @@ export default function AdminSettingsPage() {
         </div>
         <div>
           <h1 className="text-3xl md:text-4xl font-headline text-primary">Admin Control Center</h1>
-          <p className="text-muted-foreground">Manage store appearance, partners, and AI data.</p>
+          <p className="text-muted-foreground">Manage store appearance, partners, and automation.</p>
         </div>
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
           <TabsTrigger value="appearance" className="flex items-center gap-2 text-xs">
             <ImageIcon className="h-4 w-4" /> Appearance
           </TabsTrigger>
@@ -86,85 +78,60 @@ export default function AdminSettingsPage() {
             <Sparkles className="h-4 w-4" /> Discovery
           </TabsTrigger>
           <TabsTrigger value="partners" className="flex items-center gap-2 text-xs">
-            <Handshake className="h-4 w-4" /> Partner Requests
+            <Handshake className="h-4 w-4" /> Partners
+          </TabsTrigger>
+          <TabsTrigger value="email" className="flex items-center gap-2 text-xs">
+            <Mail className="h-4 w-4" /> Email Settings
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="appearance" className="space-y-6">
+        <TabsContent value="appearance">
           <HeroSettings />
         </TabsContent>
 
-        <TabsContent value="discovery" className="space-y-6">
+        <TabsContent value="discovery">
           <LocationDiscovery />
         </TabsContent>
 
-        <TabsContent value="partners" className="space-y-6">
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Wholesaler Applications</CardTitle>
-                <CardDescription>Review and approve manufacturing looms and regional partners.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isRequestsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
-                  </div>
-                ) : !requests || requests.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Handshake className="mx-auto h-12 w-12 opacity-20 mb-4" />
-                    <p>No partnership applications found.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {requests.map((req) => (
-                      <div key={req.id} className="p-6 border rounded-2xl flex flex-col md:flex-row justify-between gap-6 transition-all hover:border-primary/20">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-headline text-xl text-primary">{req.name}</h3>
-                            <Badge variant={req.status === 'approved' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'} className="text-[9px] uppercase font-black">
-                              {req.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{req.address}</p>
-                          <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                            <span className="flex items-center gap-1"><Check className="h-3 w-3" /> {req.email}</span>
-                            <span className="flex items-center gap-1"><Check className="h-3 w-3" /> {req.phone}</span>
-                            {req.isManufacturer && <Badge className="bg-accent text-accent-foreground text-[8px]">MANUFACTURER</Badge>}
-                          </div>
-                          <div className="pt-2">
-                            <p className="text-xs font-medium"><span className="text-muted-foreground">Saree Types:</span> {req.sareeTypes}</p>
-                          </div>
-                        </div>
-                        
-                        {req.status === 'pending' && (
-                          <div className="flex items-center gap-2 self-start">
-                            <Button size="sm" onClick={() => handleUpdateRequest(req, 'approved')} className="bg-green-600 hover:bg-green-700">
-                              <Check className="h-4 w-4 mr-1" /> Approve
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleUpdateRequest(req, 'rejected')} className="text-destructive border-destructive/20 hover:bg-destructive/5">
-                              <X className="h-4 w-4 mr-1" /> Reject
-                            </Button>
-                          </div>
-                        )}
-                        
-                        {req.status === 'approved' && (
-                          <div className="flex flex-col items-end gap-2 self-start">
-                            <div className="flex items-center text-green-600 text-[10px] font-black uppercase gap-1">
-                               <UserCheck className="h-4 w-4" /> Ready for Onboarding
-                            </div>
-                            <p className="text-[8px] text-muted-foreground italic max-w-[150px] text-right">
-                              Partner can now register at /partner/login using this email.
-                            </p>
-                          </div>
-                        )}
+        <TabsContent value="email">
+          <EmailSettings />
+        </TabsContent>
+
+        <TabsContent value="partners">
+          <Card>
+            <CardHeader>
+              <CardTitle>Wholesaler Applications</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isRequestsLoading ? (
+                <Skeleton className="h-48 w-full" />
+              ) : !requests || requests.length === 0 ? (
+                <p className="text-center py-12 text-muted-foreground">No partnership applications.</p>
+              ) : (
+                <div className="space-y-6">
+                  {requests.map((req) => (
+                    <div key={req.id} className="p-6 border rounded-2xl flex justify-between gap-6">
+                      <div className="space-y-2">
+                        <h3 className="font-headline text-xl text-primary">{req.name}</h3>
+                        <p className="text-sm text-muted-foreground">{req.address}</p>
+                        <Badge variant={req.status === 'approved' ? 'default' : 'secondary'}>{req.status}</Badge>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      {req.status === 'pending' && (
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleUpdateRequest(req, 'approved')} className="bg-green-600">
+                            <Check className="h-4 w-4 mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleUpdateRequest(req, 'rejected')}>
+                            <X className="h-4 w-4 mr-1" /> Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

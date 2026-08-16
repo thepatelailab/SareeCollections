@@ -6,12 +6,14 @@ import { useUser } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
+import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut } from 'lucide-react';
+import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -48,7 +50,7 @@ export default function PartnerDashboardPage() {
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl space-y-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-4">
-          <div className="bg-primary p-3 rounded-2xl text-white shadow-xl shadow-primary/20">
+          <div className="bg-primary p-3 rounded-2xl text-white shadow-xl">
             <LayoutDashboard className="h-8 w-8" />
           </div>
           <div>
@@ -72,13 +74,30 @@ export default function PartnerDashboardPage() {
         <StatCard icon={Handshake} label="Active Orders" value="3" color="text-purple-600" />
       </div>
 
-      <div className="space-y-6">
-        <div className="flex justify-between items-center border-b pb-4">
-          <h2 className="text-2xl font-headline text-primary">Your Collection</h2>
-          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Manage Inventory</span>
-        </div>
-        <PartnerInventory />
-      </div>
+      <Tabs defaultValue="inventory" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Store className="h-4 w-4" /> My Catalog
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" /> Shipments
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="space-y-6">
+          <div className="flex justify-between items-center border-b pb-4">
+            <h2 className="text-2xl font-headline text-primary">Your Collection</h2>
+          </div>
+          <PartnerInventory />
+        </TabsContent>
+
+        <TabsContent value="orders" className="space-y-6">
+          <div className="flex justify-between items-center border-b pb-4">
+            <h2 className="text-2xl font-headline text-primary">Order Fulfilment</h2>
+          </div>
+          <PartnerOrders />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -91,7 +110,6 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any, label: strin
           <div className={`p-2 rounded-xl bg-muted/50 ${color}`}>
             <Icon className="h-5 w-5" />
           </div>
-          <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Live Status</span>
         </div>
         <div className="space-y-1">
           <h3 className="text-2xl font-black text-primary tracking-tight">{value}</h3>
