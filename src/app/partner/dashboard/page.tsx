@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
 import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck, Share2, Copy, CheckCircle2, Heart, Award } from 'lucide-react';
+import { LayoutDashboard, Store, Package, TrendingUp, Handshake, LogOut, Truck, Share2, Copy, CheckCircle2, Heart, Award, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
@@ -17,6 +17,18 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, query, where } from 'firebase/firestore';
 import { Product, Order } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+
+const FacebookIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" className="h-4 w-4 fill-current">
+    <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06H297V6.26S260.43 0 225.36 0C152.3 0 104.33 44.38 104.33 124.72v70.62H22.89V288h81.44v224h100.12V288z"/>
+  </svg>
+);
+
+const WhatsAppIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="h-4 w-4 fill-current">
+    <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.7 17.8 69.4 27.2 106.2 27.2h.1c122.3 0 222-99.6 222-222 0-59.3-23-115.1-65.1-157.1zM223.9 445.5c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 365.7l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.1-3.2-5.5-.3-8.5 2.5-11.2 2.5-2.5 5.5-6.5 8.3-9.7 2.8-3.3 3.7-5.6 5.6-9.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.5 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+  </svg>
+);
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -40,13 +52,32 @@ export default function PartnerDashboardPage() {
     }
   };
 
-  const copyBoutiqueLink = () => {
+  const getBoutiqueLink = () => {
     if (typeof window !== 'undefined' && user?.uid) {
-      const link = `${window.location.origin}/partners/${user.uid}`;
+      return `${window.location.origin}/partners/${user.uid}`;
+    }
+    return '';
+  };
+
+  const copyBoutiqueLink = () => {
+    const link = getBoutiqueLink();
+    if (link) {
       navigator.clipboard.writeText(link);
       setCopied(true);
       toast({ title: 'Boutique Link Copied!', description: 'Share this link on your WhatsApp or Instagram bio.' });
       setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  const handleSocialShare = (platform: 'whatsapp' | 'facebook') => {
+    const link = getBoutiqueLink();
+    if (!link) return;
+    
+    const text = `Explore my exclusive heritage collection on SareeDukan!`;
+    if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + link)}`, '_blank');
+    } else if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`, '_blank');
     }
   };
 
@@ -103,7 +134,7 @@ export default function PartnerDashboardPage() {
         
         <div className="flex gap-3 w-full md:w-auto">
           <WholesalerAddSareeDialog />
-          <Button variant="outline" size="icon" onClick={handleLogout} className="rounded-full h-12 w-12 border-primary/10">
+          <Button variant="outline" size="icon" onClick={handleLogout} className="rounded-full h-12 w-12 border-primary/10 hover:bg-destructive/5 hover:border-destructive/20">
             <LogOut className="h-5 w-5 text-destructive" />
           </Button>
         </div>
@@ -132,53 +163,66 @@ export default function PartnerDashboardPage() {
         <Card className="rounded-[2rem] border-primary/5 shadow-md flex flex-col justify-center items-center text-center p-6 bg-accent text-accent-foreground">
            <Award className="h-8 w-8 mb-2" />
            <h3 className="text-xl font-black uppercase tracking-widest">Elite Tier</h3>
-           <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">Based on Engagement</p>
+           <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">Partner Level</p>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Campaign Toolcard */}
-        <Card className="md:col-span-2 rounded-[2.5rem] border-primary/10 bg-muted/20 overflow-hidden relative shadow-inner">
-          <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12">
-            <Share2 className="h-32 w-32 text-primary" />
-          </div>
-          <CardHeader className="p-10">
-            <CardTitle className="font-headline text-3xl text-primary">Grow Your Boutique</CardTitle>
-            <CardDescription className="text-lg">Share your verified boutique profile to attract global retail buyers and increase your heritage score.</CardDescription>
-          </CardHeader>
-          <CardContent className="px-10 pb-10 space-y-8">
-            <div className="flex flex-col md:flex-row items-center gap-4 p-5 bg-white rounded-3xl border border-primary/5 shadow-xl">
-               <div className="flex-1 truncate text-xs font-mono text-muted-foreground bg-muted/30 p-4 rounded-xl w-full">
-                 {typeof window !== 'undefined' ? `${window.location.origin}/partners/${user?.uid}` : '...'}
-               </div>
-               <Button onClick={copyBoutiqueLink} variant={copied ? "default" : "secondary"} className="rounded-2xl px-10 h-14 w-full md:w-auto text-lg font-headline">
-                 {copied ? <CheckCircle2 className="h-6 w-6" /> : <Copy className="h-6 w-6 mr-2" />}
-                 {copied ? "Copied" : "Copy Link"}
-               </Button>
+        {/* Compact Share Card */}
+        <Card className="md:col-span-2 rounded-[2.5rem] border-primary/10 bg-white shadow-xl overflow-hidden">
+          <div className="p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="space-y-2 text-center md:text-left">
+              <h3 className="font-headline text-3xl text-primary">Grow Boutique</h3>
+              <p className="text-xs text-muted-foreground font-medium">Share your heritage link to attract global buyers.</p>
             </div>
             
-            <div className="flex flex-wrap gap-4">
-               <Badge className="bg-primary/10 text-primary border-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em]">
-                 Instagram & WhatsApp Optimized
-               </Badge>
-               <Badge className="bg-primary/10 text-primary border-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em]">
-                 Direct Order Tracking
-               </Badge>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+               <Button 
+                variant="outline" 
+                className="h-12 w-12 rounded-2xl border-primary/5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20"
+                onClick={() => handleSocialShare('whatsapp')}
+               >
+                 <WhatsAppIcon />
+               </Button>
+               <Button 
+                variant="outline" 
+                className="h-12 w-12 rounded-2xl border-primary/5 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20"
+                onClick={() => handleSocialShare('facebook')}
+               >
+                 <FacebookIcon />
+               </Button>
+               <Button 
+                onClick={copyBoutiqueLink} 
+                variant={copied ? "default" : "secondary"} 
+                className="rounded-2xl h-12 px-6 font-headline flex items-center gap-2"
+               >
+                 {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                 {copied ? "Link Copied" : "Copy Boutique URL"}
+               </Button>
             </div>
-          </CardContent>
+          </div>
+          <div className="bg-muted/30 px-8 py-3 flex gap-4 overflow-hidden border-t border-primary/5">
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Optimized for:</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">WhatsApp</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">Instagram Bio</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">FB Groups</span>
+          </div>
         </Card>
 
-        {/* Competition Banner */}
-        <div className="bg-primary rounded-[2.5rem] p-10 text-primary-foreground flex flex-col justify-between shadow-2xl">
-           <div className="space-y-4">
-             <div className="h-12 w-12 bg-white/20 rounded-2xl flex items-center justify-center"><TrendingUp className="h-6 w-6" /></div>
-             <h3 className="text-3xl font-headline">Heritage Leaderboard</h3>
-             <p className="text-sm opacity-70 leading-relaxed">Top performing partners are featured in our monthly "Weaver of the Month" global social campaign.</p>
+        {/* Heritage Leaderboard Card */}
+        <Card className="bg-primary rounded-[2.5rem] p-8 text-primary-foreground flex flex-col justify-between shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+             <Award className="h-24 w-24" />
            </div>
-           <Button variant="outline" className="mt-8 h-14 rounded-2xl bg-transparent border-white/20 hover:bg-white/10 text-white font-headline">
-             View Competition Rules
+           <div className="space-y-4 relative z-10">
+             <div className="h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center"><TrendingUp className="h-5 w-5" /></div>
+             <h3 className="text-2xl font-headline">Leaderboard</h3>
+             <p className="text-xs opacity-70 leading-relaxed">Boost hearts to get featured globally.</p>
+           </div>
+           <Button variant="outline" className="mt-6 h-12 rounded-xl bg-white/10 border-white/20 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest">
+             Full Rankings
            </Button>
-        </div>
+        </Card>
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-8">
@@ -205,7 +249,7 @@ export default function PartnerDashboardPage() {
 
 function StatCard({ icon: Icon, label, value, color }: { icon: any, label: string, value: string, color: string }) {
   return (
-    <Card className="rounded-[2rem] border-primary/5 shadow-md overflow-hidden bg-card/50 backdrop-blur-sm">
+    <Card className="rounded-[2rem] border-primary/5 shadow-md overflow-hidden bg-white/50 backdrop-blur-sm">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className={`p-2 rounded-xl bg-muted/50 ${color}`}>
