@@ -12,6 +12,13 @@ service cloud.firestore {
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares']));
     }
 
+    match /orders/{orderId} {
+      allow get, list: if isSignedIn() && (isAdmin() || isWholesaler() || (resource != null && isOwner(resource.data.user_id)));
+      allow update: if isSignedIn() && (isAdmin() || isWholesaler());
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
     match /wholesalerRequests/{requestId} {
       allow create: if true; // Anyone can apply
       allow get, list, update, delete: if isAdmin();
@@ -54,7 +61,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-        return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin';
+        return isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin') ||
+          (request.auth.token.email == 'bp.brpl@gmail.com')
+        );
     }
 
     function isWholesaler() {

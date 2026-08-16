@@ -69,19 +69,23 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (serverError: FirestoreError) => {
+      async (serverError: FirestoreError) => {
         if (subscriptionRef.current !== currentSubId) return;
 
-        const path = (memoizedTargetRefOrQuery as any).path || 'query';
-        const contextualError = new FirestorePermissionError({
+        // Attempt to extract a useful path for the error reporter
+        const path = (memoizedTargetRefOrQuery as any).path || 
+                     (memoizedTargetRefOrQuery as any)._query?.path?.segments?.join('/') || 
+                     'query';
+
+        const permissionError = new FirestorePermissionError({
           operation: 'list',
           path,
         });
 
-        setError(contextualError);
+        setError(permissionError);
         setData(null);
         setIsLoading(false);
-        errorEmitter.emit('permission-error', contextualError);
+        errorEmitter.emit('permission-error', permissionError);
       }
     );
 
