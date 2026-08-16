@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -23,7 +24,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { useAppContext } from '@/components/providers/app-provider';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 
 export function PartnerLoginForm() {
   const auth = useAuth();
@@ -39,15 +39,18 @@ export function PartnerLoginForm() {
 
   const redirectUrl = searchParams.get('redirect') || '/partner/dashboard';
 
-  const verifyApproval = async (emailToCheck: string) => {
-    if (!firestore) return false;
+  const getApprovedRequest = async (emailToCheck: string) => {
+    if (!firestore) return null;
     const q = query(
       collection(firestore, 'wholesalerRequests'), 
       where('email', '==', emailToCheck.trim()),
       where('status', '==', 'approved')
     );
     const snap = await getDocs(q);
-    return !snap.empty;
+    if (!snap.empty) {
+      return snap.docs[0].data();
+    }
+    return null;
   };
 
   const handleAuthAction = async (action: 'login' | 'signup') => {
@@ -55,9 +58,10 @@ export function PartnerLoginForm() {
     setIsLoading(true);
 
     try {
+      let approvedRequest = null;
       if (action === 'signup') {
-        const isApproved = await verifyApproval(email);
-        if (!isApproved) {
+        approvedRequest = await getApprovedRequest(email);
+        if (!approvedRequest) {
           toast({
             variant: 'destructive',
             title: 'Verification Failed',
@@ -77,10 +81,14 @@ export function PartnerLoginForm() {
         finalUser = userCredential.user;
       }
 
-      // Set the role to wholesaler
+      // Set the role and initial profile data
       const userRef = doc(firestore, 'users', finalUser.uid);
-      await setDoc(userRef, { role: 'wholesaler' }, { merge: true });
-
+      const updateData: any = { role: 'wholesaler' };
+      if (approvedRequest) {
+        updateData.businessName = approvedRequest.name;
+      }
+      
+      await setDoc(userRef, updateData, { merge: true });
       await refetchUserProfile();
 
       toast({
@@ -184,7 +192,7 @@ export function PartnerLoginForm() {
                   <Label className="text-[#2D1B2E] font-bold ml-1 text-sm">Approved Email</Label>
                   <Input 
                     type="email" 
-                    placeholder="thepatelailab@gmail.com"
+                    placeholder="partner@heritage.com"
                     className="bg-[#EBF1FF] border-none h-14 rounded-xl px-4 text-[#2D1B2E] focus-visible:ring-primary/20 placeholder:text-[#2D1B2E]/30" 
                     value={email} 
                     onChange={e => setEmail(e.target.value)} 

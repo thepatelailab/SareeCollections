@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -8,14 +9,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
 import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, TrendingUp, LogOut, Truck, Copy, CheckCircle2, Heart, Award } from 'lucide-react';
+import { LayoutDashboard, Store, Package, TrendingUp, LogOut, Truck, Copy, CheckCircle2, Heart, Award, Settings, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where } from 'firebase/firestore';
-import { Product, Order } from '@/lib/types';
+import { collection, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
+import { Product, Order, UserProfile } from '@/lib/types';
+import Image from 'next/image';
 
 const FacebookIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" className="h-4 w-4 fill-current">
@@ -31,18 +36,36 @@ const WhatsAppIcon = () => (
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
-  const { isWholesaler } = useAppContext();
+  const { isWholesaler, refetchUserProfile } = useAppContext();
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
   const [copied, setCopied] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !isWholesaler) {
       router.push('/');
     }
   }, [user, isUserLoading, isWholesaler, router]);
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (!firestore || !user?.uid) return;
+      const snap = await getDoc(doc(firestore, 'users', user.uid));
+      if (snap.exists()) {
+        const data = snap.data() as UserProfile;
+        setBusinessName(data.businessName || '');
+        setBannerPreview(data.bannerUrl || null);
+      }
+    }
+    loadProfile();
+  }, [firestore, user?.uid]);
 
   const handleLogout = () => {
     if (auth) {
@@ -77,6 +100,43 @@ export default function PartnerDashboardPage() {
       window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + link)}`, '_blank');
     } else if (platform === 'facebook') {
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`, '_blank');
+    }
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setBannerFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setBannerPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateBoutique = async () => {
+    if (!firestore || !user?.uid) return;
+    setIsUpdatingProfile(true);
+    try {
+      let bannerUrl = bannerPreview;
+
+      if (bannerFile) {
+        const storage = getStorage();
+        const bannerRef = ref(storage, `users/${user.uid}/banner.jpg`);
+        await uploadBytes(bannerRef, bannerFile);
+        bannerUrl = await getDownloadURL(bannerRef);
+      }
+
+      await updateDoc(doc(firestore, 'users', user.uid), {
+        businessName,
+        bannerUrl,
+      });
+
+      await refetchUserProfile();
+      toast({ title: 'Boutique Updated', description: 'Your public storefront has been updated.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Update Failed' });
+    } finally {
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -126,13 +186,12 @@ export default function PartnerDashboardPage() {
             <LayoutDashboard className="h-8 w-8" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-5xl font-headline text-primary">Wholesale Center</h1>
-            <p className="text-muted-foreground font-medium italic text-xs">Partner Account: {user?.email}</p>
+            <h1 className="text-3xl md:text-5xl font-headline text-primary">{businessName || 'Wholesale Center'}</h1>
+            <p className="text-muted-foreground font-medium italic text-xs">Partner ID: {user?.uid.slice(-6)}</p>
           </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          {/* Compact Share Controls */}
           <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm p-2 rounded-2xl border border-primary/5 shadow-sm">
              <Button 
               variant="outline" 
@@ -171,24 +230,9 @@ export default function PartnerDashboardPage() {
 
       {/* Heritage Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-        <StatCard 
-          icon={TrendingUp} 
-          label="Total Revenue" 
-          value={`INR ${totalRevenue.toLocaleString()}`} 
-          color="text-green-600" 
-        />
-        <StatCard 
-          icon={Heart} 
-          label="Heritage Hearts" 
-          value={totalHearts.toString()} 
-          color="text-red-500" 
-        />
-        <StatCard 
-          icon={Package} 
-          label="Active Inventory" 
-          value={products?.length.toString() || '0'} 
-          color="text-blue-600" 
-        />
+        <StatCard icon={TrendingUp} label="Total Revenue" value={`INR ${totalRevenue.toLocaleString()}`} color="text-green-600" />
+        <StatCard icon={Heart} label="Heritage Hearts" value={totalHearts.toString()} color="text-red-500" />
+        <StatCard icon={Package} label="Active Inventory" value={products?.length.toString() || '0'} color="text-blue-600" />
         <Card className="rounded-[2rem] border-primary/5 shadow-md flex flex-col justify-center items-center text-center p-6 bg-primary text-primary-foreground">
            <Award className="h-8 w-8 mb-2 text-accent" />
            <h3 className="text-xl font-black uppercase tracking-widest">Elite Tier</h3>
@@ -197,12 +241,15 @@ export default function PartnerDashboardPage() {
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[500px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
           <TabsTrigger value="inventory" className="flex items-center gap-2 rounded-xl font-headline text-lg">
-            <Store className="h-5 w-5" /> My Boutique
+            <Store className="h-5 w-5" /> Boutique
           </TabsTrigger>
           <TabsTrigger value="orders" className="flex items-center gap-2 rounded-xl font-headline text-lg">
-            <Truck className="h-5 w-5" /> Active Orders
+            <Truck className="h-5 w-5" /> Orders
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2 rounded-xl font-headline text-lg">
+            <Settings className="h-5 w-5" /> Settings
           </TabsTrigger>
         </TabsList>
 
@@ -212,6 +259,70 @@ export default function PartnerDashboardPage() {
 
         <TabsContent value="orders" className="space-y-6">
           <PartnerOrders />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="rounded-[2.5rem] shadow-xl border-primary/5 overflow-hidden">
+              <CardHeader className="p-8 bg-primary text-primary-foreground">
+                <CardTitle className="font-headline text-2xl">Boutique Identity</CardTitle>
+                <CardDescription className="text-primary-foreground/60">Customize your public storefront details.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="business-name" className="text-sm font-bold text-primary">Heritage Business Name</Label>
+                  <Input 
+                    id="business-name" 
+                    placeholder="e.g. Traditional Silk House" 
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="h-12 rounded-xl border-primary/10"
+                  />
+                  <p className="text-[10px] text-muted-foreground italic">This name will appear as the main title on your boutique page.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-primary">Boutique Hero Banner</Label>
+                  <div className="flex flex-col gap-4">
+                    <div className="relative aspect-[21/9] rounded-2xl overflow-hidden border bg-muted group">
+                      {bannerPreview ? (
+                        <Image src={bannerPreview} alt="Banner Preview" fill className="object-cover" />
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center opacity-40">
+                          <ImageIcon className="h-10 w-10 mb-2" />
+                          <span className="text-[10px] uppercase font-black tracking-widest">No Banner Set</span>
+                        </div>
+                      )}
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleBannerChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleUpdateBoutique} 
+                      disabled={isUpdatingProfile} 
+                      className="w-full h-14 rounded-2xl shadow-lg"
+                    >
+                      {isUpdatingProfile ? <Loader2 className="animate-spin" /> : 'Save Boutique Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+               <Card className="rounded-[2.5rem] p-8 border-accent/20 bg-accent/5">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                    <Award className="h-4 w-4" /> Branding Tip
+                  </h4>
+                  <p className="text-xs leading-relaxed text-muted-foreground italic">
+                    "High-resolution lifestyle banners showing your weaving clusters or workshop interiors increase customer trust by 40%. Choose an image that tells your brand's heritage story."
+                  </p>
+               </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

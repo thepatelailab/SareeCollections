@@ -1,7 +1,8 @@
+
 'use client';
 
-import { useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { useMemoFirebase, useCollection, useDoc } from '@/firebase';
+import { collection, query, where, getDocs, limit, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { ProductGrid } from '@/components/product-grid';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,7 +12,8 @@ import { Store, MapPin, Share2, Award, Star, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Product } from '@/lib/types';
+import { Product, UserProfile } from '@/lib/types';
+import Image from 'next/image';
 
 export default function PartnerBoutiquePage() {
   const params = useParams();
@@ -19,12 +21,19 @@ export default function PartnerBoutiquePage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
+  const partnerDocRef = useMemoFirebase(() => {
+    if (!firestore || !id) return null;
+    return doc(firestore, 'users', id);
+  }, [firestore, id]);
+
+  const { data: partnerProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(partnerDocRef);
+
   const productsQuery = useMemoFirebase(() => {
     if (!firestore || !id) return null;
     return query(collection(firestore, 'SareeCollection'), where('ownerId', '==', id));
   }, [firestore, id]);
 
-  const { data: products, isLoading } = useCollection<Product>(productsQuery as any);
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery as any);
 
   const handleShare = () => {
     if (typeof window !== 'undefined') {
@@ -33,10 +42,10 @@ export default function PartnerBoutiquePage() {
     }
   };
 
-  if (isLoading) {
+  if (isProfileLoading || isProductsLoading) {
     return (
       <div className="container mx-auto px-4 py-12 space-y-8">
-        <Skeleton className="h-32 w-full rounded-[2.5rem]" />
+        <Skeleton className="h-64 w-full rounded-[2.5rem]" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[1, 2, 3].map(i => <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />)}
         </div>
@@ -47,15 +56,26 @@ export default function PartnerBoutiquePage() {
   const totalLikes = products?.reduce((acc, p) => acc + (p.likes || 0), 0) || 0;
   const totalShares = products?.reduce((acc, p) => acc + (p.shares || 0), 0) || 0;
   const heritageScore = totalLikes + totalShares;
+  
+  const boutiqueName = partnerProfile?.businessName || `Boutique ${id.slice(-4)}`;
 
   return (
     <div className="min-h-screen bg-[#F3F4ED]">
       {/* Heritage Header */}
-      <div className="bg-primary text-primary-foreground py-16 md:py-24 relative overflow-hidden">
-        {/* Subtle decorative background element */}
-        <div className="absolute top-0 right-0 p-20 opacity-5 rotate-12">
-          <Store className="h-64 w-64" />
-        </div>
+      <div className="relative bg-primary text-primary-foreground py-16 md:py-24 overflow-hidden">
+        {/* Dynamic Banner Background */}
+        {partnerProfile?.bannerUrl && (
+          <div className="absolute inset-0 z-0">
+            <Image 
+              src={partnerProfile.bannerUrl} 
+              alt={boutiqueName} 
+              fill 
+              className="object-cover opacity-30" 
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/80 to-primary/95"></div>
+          </div>
+        )}
 
         <div className="container mx-auto px-4 text-center space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-md border border-white/20 mb-4">
@@ -64,7 +84,7 @@ export default function PartnerBoutiquePage() {
           </div>
           
           <h1 className="text-4xl md:text-7xl font-headline lowercase leading-tight">
-            {products?.[0]?.ownerId === id ? `Partner Boutique ${id.slice(-4)}` : 'Heritage Boutique'}
+            {boutiqueName}
           </h1>
           
           <p className="text-lg md:text-xl text-primary-foreground/70 max-w-2xl mx-auto italic font-body">

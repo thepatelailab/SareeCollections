@@ -22,6 +22,8 @@ export interface CartItem extends Product {
 export interface UserProfile {
   role: 'customer' | 'admin' | 'wholesaler';
   email?: string;
+  businessName?: string;
+  bannerUrl?: string;
 }
 
 export interface ShippingDetails {
