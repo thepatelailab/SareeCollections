@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
 import { Product, Order, UserProfile } from '@/lib/types';
 import Image from 'next/image';
@@ -126,14 +126,17 @@ export default function PartnerDashboardPage() {
         bannerUrl = await getDownloadURL(bannerRef);
       }
 
-      await updateDoc(doc(firestore, 'users', user.uid), {
+      await setDoc(doc(firestore, 'users', user.uid), {
         businessName,
         bannerUrl,
-      });
+        role: 'wholesaler',
+        updatedAt: new Date()
+      }, { merge: true });
 
       await refetchUserProfile();
       toast({ title: 'Boutique Updated', description: 'Your public storefront has been updated.' });
     } catch (e) {
+      console.error("Boutique Update Error:", e);
       toast({ variant: 'destructive', title: 'Update Failed' });
     } finally {
       setIsUpdatingProfile(false);
