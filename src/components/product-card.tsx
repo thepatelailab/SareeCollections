@@ -73,164 +73,166 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="group flex flex-col overflow-hidden rounded-[2.5rem] shadow-sm transition-all duration-500 hover:shadow-2xl border border-border bg-card/50">
-      <Link href={`/products/${product.id}`} className="block relative">
-        <CardContent className="p-0 relative">
-          <Tabs defaultValue="model" className="w-full">
-            <TabsList 
-              className="absolute top-4 left-4 z-20 h-9 bg-primary/40 backdrop-blur-xl rounded-full p-1 border border-primary/10 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <TabsTrigger 
-                value="model" 
-                disabled={!product.modelImg} 
-                className="text-[7px] h-7 px-3 rounded-full font-black uppercase tracking-[0.1em] data-[state=active]:bg-accent data-[state=active]:text-accent-foreground transition-all"
+      {/* Top section with images and metrics overlay */}
+      <div className="relative">
+        <Link href={`/products/${product.id}`} className="block relative">
+          <CardContent className="p-0 relative">
+            <Tabs defaultValue="model" className="w-full">
+              <TabsList 
+                className="absolute top-4 left-4 z-20 h-9 bg-primary/40 backdrop-blur-xl rounded-full p-1 border border-primary/10 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
-                Model
-              </TabsTrigger>
-              <TabsTrigger 
-                value="saree" 
-                className="text-[7px] h-7 px-3 rounded-full font-black uppercase tracking-[0.1em] data-[state=active]:bg-accent data-[state=active]:text-accent-foreground transition-all"
-              >
-                Fabric
-              </TabsTrigger>
-            </TabsList>
-            
-            {product.variety && (
-              <Badge className="absolute top-4 right-4 z-20 bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold opacity-0 group-hover:opacity-100 transition-all duration-500">
-                {product.variety}
-              </Badge>
-            )}
+                <TabsTrigger 
+                  value="model" 
+                  disabled={!product.modelImg} 
+                  className="text-[7px] h-7 px-3 rounded-full font-black uppercase tracking-[0.1em] data-[state=active]:bg-accent data-[state=active]:text-accent-foreground transition-all"
+                >
+                  Model
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="saree" 
+                  className="text-[7px] h-7 px-3 rounded-full font-black uppercase tracking-[0.1em] data-[state=active]:bg-accent data-[state=active]:text-accent-foreground transition-all"
+                >
+                  Fabric
+                </TabsTrigger>
+              </TabsList>
+              
+              {product.variety && (
+                <Badge className="absolute top-4 right-4 z-20 bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold opacity-0 group-hover:opacity-100 transition-all duration-500">
+                  {product.variety}
+                </Badge>
+              )}
 
-            <TabsContent value="saree" className="mt-0">
-              <div className="aspect-[4/5] relative overflow-hidden">
-                <Image
-                  src={product.sareeImg}
-                  alt={product.name}
-                  fill
-                  className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                  data-ai-hint={product.sareeImgHint}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="model" className="mt-0">
-               <div className="aspect-[4/5] relative overflow-hidden">
-                {product.modelImg ? (
+              <TabsContent value="saree" className="mt-0">
+                <div className="aspect-[4/5] relative overflow-hidden">
                   <Image
-                    src={product.modelImg}
-                    alt={`Model wearing ${product.name}`}
+                    src={product.sareeImg}
+                    alt={product.name}
                     fill
                     className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                    data-ai-hint={product.sareeImgHint}
                   />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-muted">
-                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-30">Generating Preview...</span>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </TabsContent>
+              <TabsContent value="model" className="mt-0">
+                 <div className="aspect-[4/5] relative overflow-hidden">
+                  {product.modelImg ? (
+                    <Image
+                      src={product.modelImg}
+                      alt={`Model wearing ${product.name}`}
+                      fill
+                      className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-muted">
+                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-30">Generating Preview...</span>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Link>
 
-          <div 
-            className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0"
+        {/* Interaction Overlay */}
+        <div 
+          className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <div className="flex gap-2">
+             <Button 
+                variant="secondary" 
+                size="icon" 
+                className={cn(
+                  "h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/95 backdrop-blur-xl transition-all shadow-xl border border-white/40",
+                  isLiked ? "text-red-500 scale-105" : "text-muted-foreground hover:text-red-500"
+                )}
+                onClick={handleLike}
+              >
+                <Heart className={cn("h-5 w-5 md:h-6 md:w-6", isLiked && "fill-current")} />
+              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/95 backdrop-blur-xl text-muted-foreground hover:text-primary shadow-xl border border-white/40"
+                  >
+                    <Share2 className="h-5 w-5 md:h-6 md:w-6" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-2 rounded-full shadow-2xl border-primary/10 backdrop-blur-xl bg-white/95" 
+                  align="start" 
+                  side="bottom"
+                  sideOffset={10}
+                >
+                  <div className="flex flex-row gap-4 px-2">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-[#25D366]/10" onClick={(e) => handleShare('whatsapp', e)}>
+                      <WhatsAppIcon />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-[#1877F2]/10" onClick={(e) => handleShare('facebook', e)}>
+                      <FacebookIcon />
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+          </div>
+          
+          <div className="flex gap-3 bg-white/95 backdrop-blur-xl rounded-full px-5 py-2 text-[12px] font-bold text-primary shadow-xl border border-white/50">
+            <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 fill-red-500 text-red-500" /> {product.likes || 0}</span>
+            <span className="flex items-center gap-1.5"><Share2 className="h-4 w-4 text-primary" /> {product.shares || 0}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Information area */}
+      <div className="flex flex-1 flex-col justify-between p-6">
+        <CardHeader className="p-0">
+          <Link href={`/products/${product.id}`}>
+            <CardTitle className="font-headline text-2xl leading-tight text-primary hover:underline">
+              {product.name}
+            </CardTitle>
+          </Link>
+          {product.ownerId && (
+            <Link 
+              href={`/partners/${product.ownerId}`}
+              className="inline-flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-accent-foreground mt-2 hover:text-primary transition-colors"
+            >
+              <Store className="h-3 w-3" /> Partner Boutique
+            </Link>
+          )}
+          <CardDescription className="pt-2 text-[10px] italic uppercase tracking-[0.2em] font-black opacity-50">
+            Heritage Handloom Collection
+          </CardDescription>
+        </CardHeader>
+        
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex flex-col">
+             <span className="text-[11px] text-muted-foreground line-through opacity-40 font-black">INR {Math.round(product.price * 1.2)}</span>
+             <p className="text-2xl font-black text-primary tracking-tight">INR {product.price}</p>
+          </div>
+          <Button
+            size="sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              addToCart(product);
             }}
+            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95"
+            aria-label={`Add ${product.name} to cart`}
           >
-            <div className="flex gap-2">
-               <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className={cn(
-                    "h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/95 backdrop-blur-xl transition-all shadow-xl border border-white/40",
-                    isLiked ? "text-red-500 scale-105" : "text-muted-foreground hover:text-red-500"
-                  )}
-                  onClick={handleLike}
-                >
-                  <Heart className={cn("h-5 w-5 md:h-6 md:w-6", isLiked && "fill-current")} />
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="secondary" 
-                      size="icon" 
-                      className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/95 backdrop-blur-xl text-muted-foreground hover:text-primary shadow-xl border border-white/40"
-                    >
-                      <Share2 className="h-5 w-5 md:h-6 md:w-6" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-2 rounded-full shadow-2xl border-primary/10 backdrop-blur-xl bg-white/95" 
-                    align="start" 
-                    side="bottom"
-                    sideOffset={10}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <div className="flex flex-row gap-4 px-2">
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-[#25D366]/10" onClick={(e) => handleShare('whatsapp', e)}>
-                        <WhatsAppIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-[#1877F2]/10" onClick={(e) => handleShare('facebook', e)}>
-                        <FacebookIcon />
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-            </div>
-            
-            <div className="flex gap-3 bg-white/95 backdrop-blur-xl rounded-full px-5 py-2 text-[12px] font-bold text-primary shadow-xl border border-white/50">
-              <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 fill-red-500 text-red-500" /> {product.likes || 0}</span>
-              <span className="flex items-center gap-1.5"><Share2 className="h-4 w-4 text-primary" /> {product.shares || 0}</span>
-            </div>
-          </div>
-        </CardContent>
-
-        <div className="flex flex-1 flex-col justify-between p-6">
-          <CardHeader className="p-0">
-            <CardTitle className="font-headline text-2xl leading-tight text-primary">
-              {product.name}
-            </CardTitle>
-            {product.ownerId && (
-              <Link 
-                href={`/partners/${product.ownerId}`}
-                className="inline-flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-accent-foreground mt-2 hover:text-primary transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Store className="h-3 w-3" /> Partner Boutique
-              </Link>
-            )}
-            <CardDescription className="pt-2 text-[10px] italic uppercase tracking-[0.2em] font-black opacity-50">
-              Heritage Handloom Collection
-            </CardDescription>
-          </CardHeader>
-          
-          <div className="mt-6 flex items-center justify-between">
-            <div className="flex flex-col">
-               <span className="text-[11px] text-muted-foreground line-through opacity-40 font-black">INR {Math.round(product.price * 1.2)}</span>
-               <p className="text-2xl font-black text-primary tracking-tight">INR {product.price}</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                addToCart(product);
-              }}
-              className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95"
-              aria-label={`Add ${product.name} to cart`}
-            >
-              <ShoppingBag className="mr-2.5 h-4.5 w-4.5" />
-              Acquire
-            </Button>
-          </div>
+            <ShoppingBag className="mr-2.5 h-4.5 w-4.5" />
+            Acquire
+          </Button>
         </div>
-      </Link>
+      </div>
     </Card>
   );
 }
