@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -24,16 +25,13 @@ export function PartnerOrders() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    // Querying all paid orders - logically in a real app you'd filter by item ownerId
-    // For this prototype, we show orders where at least one item belongs to this partner
     return query(collection(firestore, 'orders'), where('status', 'in', ['paid', 'shipped']));
   }, [firestore, user?.uid]);
 
   const { data: allOrders, isLoading } = useCollection<Order>(ordersQuery as any);
 
-  // Filter orders that contain items owned by this partner
   const myOrders = allOrders?.filter(order => 
-    order.items.some(item => item.ownerId === user?.uid)
+    order.items?.some(item => item.ownerId === user?.uid)
   ) || [];
 
   const handleShip = async (orderId: string) => {
@@ -53,7 +51,7 @@ export function PartnerOrders() {
         shipped_at: new Date(),
         updated_at: new Date()
       });
-      toast({ title: 'Order Shipped!', description: 'Buyer has been notified of the tracking details.' });
+      toast({ title: 'Order Shipped!', description: 'Buyer has been notified.' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update Failed' });
     } finally {
@@ -68,7 +66,7 @@ export function PartnerOrders() {
       <Card className="border-dashed py-20 flex flex-col items-center text-center">
         <Package className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />
         <h3 className="text-xl font-headline text-primary">No Sales Yet</h3>
-        <p className="text-muted-foreground mt-2">When a buyer acquires your masterpiece, it will appear here.</p>
+        <p className="text-muted-foreground mt-2">Orders will appear here once payment is confirmed.</p>
       </Card>
     );
   }
@@ -76,7 +74,7 @@ export function PartnerOrders() {
   return (
     <div className="space-y-6">
       {myOrders.map((order) => {
-        const myItems = order.items.filter(i => i.ownerId === user?.uid);
+        const myItems = order.items?.filter(i => i.ownerId === user?.uid) || [];
         return (
           <Card key={order.id} className="overflow-hidden rounded-[2rem] border-primary/5 shadow-lg">
             <CardHeader className="bg-muted/30 pb-4">
@@ -84,8 +82,8 @@ export function PartnerOrders() {
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 p-2 rounded-xl"><CreditCard className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <CardTitle className="text-lg">Order #{order.order_id.slice(-8)}</CardTitle>
-                    <CardDescription>Placed on {new Date(order.created_at?.seconds * 1000).toLocaleDateString()}</CardDescription>
+                    <CardTitle className="text-lg">Order #{order.order_id?.slice(-8) || '...'}</CardTitle>
+                    <CardDescription>Placed on {order.created_at?.seconds ? new Date(order.created_at.seconds * 1000).toLocaleDateString() : 'Recent'}</CardDescription>
                   </div>
                 </div>
                 <Badge variant={order.status === 'shipped' ? 'default' : 'secondary'} className="uppercase font-black text-[10px]">
@@ -100,8 +98,8 @@ export function PartnerOrders() {
                     <User className="h-3 w-3" /> Buyer Information
                   </h4>
                   <div className="space-y-1">
-                    <p className="font-bold text-primary">{order.shipping_details.name}</p>
-                    <p className="text-sm flex items-center gap-2 text-muted-foreground"><Phone className="h-3.5 w-3.5" /> {order.shipping_details.phone}</p>
+                    <p className="font-bold text-primary">{order.shipping_details?.name || 'Guest'}</p>
+                    <p className="text-sm flex items-center gap-2 text-muted-foreground"><Phone className="h-3.5 w-3.5" /> {order.shipping_details?.phone || 'N/A'}</p>
                   </div>
                 </div>
                 <div>
@@ -109,8 +107,8 @@ export function PartnerOrders() {
                     <MapPin className="h-3 w-3" /> Shipping Address
                   </h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {order.shipping_details.address},<br/>
-                    {order.shipping_details.city} - {order.shipping_details.zip}
+                    {order.shipping_details?.address || 'Address not provided'},<br/>
+                    {order.shipping_details?.city || ''} - {order.shipping_details?.zip || ''}
                   </p>
                 </div>
                 <div>

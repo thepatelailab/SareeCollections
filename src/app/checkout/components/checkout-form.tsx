@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 import { sendOrderEmails } from '@/app/actions/email-actions';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -112,7 +112,6 @@ export function CheckoutForm() {
             ownerId: i.ownerId,
             price: i.price
           })),
-          shipping_details: formData,
         }),
       });
 
@@ -127,8 +126,14 @@ export function CheckoutForm() {
         name: "SareeDukan.Com",
         order_id: order.id,
         handler: async function () {
-          // Trigger Emails via Server Action
+          // 1. Synchronize Shipping Details to Firestore (as backend main.py lacks this logic)
           if (firestore) {
+             const orderRef = doc(firestore, 'orders', order.id);
+             await updateDoc(orderRef, {
+                shipping_details: formData,
+                updated_at: new Date()
+             }).catch(e => console.error("Order sync failed", e));
+
              const settings = await getDoc(doc(firestore, 'settings', 'email'));
              const senderEmail = settings.exists() ? settings.data().verifiedEmail : 'onboarding@resend.dev';
              
@@ -143,7 +148,7 @@ export function CheckoutForm() {
              });
           }
 
-          toast({ title: 'Success!', description: 'Order confirmed and emails sent.' });
+          toast({ title: 'Success!', description: 'Order confirmed and details synced.' });
           clearCart();
           router.push('/');
         },

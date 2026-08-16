@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -40,7 +41,7 @@ export interface Order {
   amount_paise: number;
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   items: any[];
-  shipping_details: ShippingDetails;
+  shipping_details?: ShippingDetails;
   created_at: any;
   updated_at: any;
   courier?: string;

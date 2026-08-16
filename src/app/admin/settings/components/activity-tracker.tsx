@@ -7,7 +7,7 @@ import { Order } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, TrendingUp, Users, AlertCircle } from 'lucide-react';
+import { ShoppingBag, TrendingUp, AlertCircle } from 'lucide-react';
 
 export function ActivityTracker() {
   const firestore = useFirestore();
@@ -44,8 +44,10 @@ export function ActivityTracker() {
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/10 p-2 rounded-lg"><ShoppingBag className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <p className="font-bold text-sm">Order #{order.order_id.slice(-6)}</p>
-                    <p className="text-xs text-muted-foreground">{order.shipping_details.name} - {order.shipping_details.city}</p>
+                    <p className="font-bold text-sm">Order #{order.order_id?.slice(-6) || '...'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.shipping_details?.name || 'Customer'} - {order.shipping_details?.city || 'Location Pending'}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right space-y-1">
