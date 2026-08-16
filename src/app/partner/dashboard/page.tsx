@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase, useFirebase, useStorage } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
@@ -17,7 +17,7 @@ import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Product, Order, UserProfile } from '@/lib/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ const WhatsAppIcon = () => (
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
   const { firestore, auth } = useFirebase();
+  const storage = useStorage();
   const { isWholesaler, refetchUserProfile } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -117,9 +118,8 @@ export default function PartnerDashboardPage() {
   };
 
   const handleUpdateBoutique = async () => {
-    // Explicitly check for user and firestore availability
-    if (!firestore || !user?.uid) {
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Authentication not ready.' });
+    if (!firestore || !user?.uid || !storage) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Services not initialized.' });
       return;
     }
 
@@ -127,15 +127,12 @@ export default function PartnerDashboardPage() {
     try {
       let bannerUrl = bannerPreview;
 
-      // Handle image upload if a file is selected
       if (bannerFile) {
-        const storage = getStorage(); // Direct SDK call
         const bannerRef = ref(storage, `users/${user.uid}/banner.jpg`);
         const uploadSnapshot = await uploadBytes(bannerRef, bannerFile);
         bannerUrl = await getDownloadURL(uploadSnapshot.ref);
       }
 
-      // Update Firestore document with merge: true to avoid overwriting other fields
       await setDoc(doc(firestore, 'users', user.uid), {
         businessName: businessName.trim(),
         bannerUrl,
@@ -143,17 +140,16 @@ export default function PartnerDashboardPage() {
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      // Refresh global context profile
       await refetchUserProfile();
       
-      toast({ title: 'Boutique Updated', description: 'Your public storefront has been successfully updated.' });
-      setBannerFile(null); // Clear selected file after success
+      toast({ title: 'Boutique Updated', description: 'Changes saved successfully.' });
+      setBannerFile(null);
     } catch (e: any) {
-      console.error("Boutique Update Error Detailed:", e);
+      console.error("Boutique Update Error:", e);
       toast({ 
         variant: 'destructive', 
         title: 'Update Failed', 
-        description: e.message || 'Check your internet connection and permissions.' 
+        description: e.message || 'Check permissions and try again.' 
       });
     } finally {
       setIsUpdatingProfile(false);
@@ -199,7 +195,6 @@ export default function PartnerDashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl space-y-10">
-      {/* Header with Quick Share */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-3 rounded-2xl text-white shadow-xl">
@@ -248,7 +243,6 @@ export default function PartnerDashboardPage() {
         </div>
       </div>
 
-      {/* Heritage Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <StatCard icon={TrendingUp} label="Total Revenue" value={`INR ${totalRevenue.toLocaleString()}`} color="text-green-600" />
         <StatCard icon={Heart} label="Heritage Hearts" value={totalHearts.toString()} color="text-red-500" />
@@ -320,13 +314,24 @@ export default function PartnerDashboardPage() {
                         className="absolute inset-0 opacity-0 cursor-pointer z-20"
                       />
                     </div>
-                    <Button 
-                      onClick={handleUpdateBoutique} 
-                      disabled={isUpdatingProfile} 
-                      className="w-full h-14 rounded-2xl shadow-lg bg-primary"
-                    >
-                      {isUpdatingProfile ? <Loader2 className="animate-spin h-5 w-5" /> : 'Save Boutique Changes'}
-                    </Button>
+                    
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-4">
+                        <Badge className="bg-primary/10 text-primary border-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em]">
+                          Instagram & WhatsApp Optimized
+                        </Badge>
+                        <Badge className="bg-primary/10 text-primary border-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em]">
+                          Heritage Branded
+                        </Badge>
+                      </div>
+                      <Button 
+                        onClick={handleUpdateBoutique} 
+                        disabled={isUpdatingProfile} 
+                        className="w-full h-14 rounded-2xl shadow-lg bg-primary"
+                      >
+                        {isUpdatingProfile ? <Loader2 className="animate-spin h-5 w-5" /> : 'Save Boutique Changes'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
