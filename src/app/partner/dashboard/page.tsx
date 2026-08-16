@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PartnerInventory } from './components/partner-inventory';
@@ -17,8 +16,8 @@ import { Label } from '@/components/ui/label';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where, doc, setDoc, getDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
+import { collection, query, where, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Product, Order, UserProfile } from '@/lib/types';
 import Image from 'next/image';
 
@@ -36,10 +35,9 @@ const WhatsAppIcon = () => (
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
+  const { storage, firestore, auth } = useFirebase();
   const { isWholesaler, refetchUserProfile } = useAppContext();
   const router = useRouter();
-  const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   
   const [copied, setCopied] = useState(false);
@@ -57,11 +55,15 @@ export default function PartnerDashboardPage() {
   useEffect(() => {
     async function loadProfile() {
       if (!firestore || !user?.uid) return;
-      const snap = await getDoc(doc(firestore, 'users', user.uid));
-      if (snap.exists()) {
-        const data = snap.data() as UserProfile;
-        setBusinessName(data.businessName || '');
-        setBannerPreview(data.bannerUrl || null);
+      try {
+        const snap = await getDoc(doc(firestore, 'users', user.uid));
+        if (snap.exists()) {
+          const data = snap.data() as UserProfile;
+          setBusinessName(data.businessName || '');
+          setBannerPreview(data.bannerUrl || null);
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
       }
     }
     loadProfile();
@@ -114,30 +116,29 @@ export default function PartnerDashboardPage() {
   };
 
   const handleUpdateBoutique = async () => {
-    if (!firestore || !user?.uid) return;
+    if (!firestore || !user?.uid || !storage) return;
     setIsUpdatingProfile(true);
     try {
       let bannerUrl = bannerPreview;
 
       if (bannerFile) {
-        const storage = getStorage();
         const bannerRef = ref(storage, `users/${user.uid}/banner.jpg`);
-        await uploadBytes(bannerRef, bannerFile);
-        bannerUrl = await getDownloadURL(bannerRef);
+        const uploadSnapshot = await uploadBytes(bannerRef, bannerFile);
+        bannerUrl = await getDownloadURL(uploadSnapshot.ref);
       }
 
       await setDoc(doc(firestore, 'users', user.uid), {
         businessName,
         bannerUrl,
         role: 'wholesaler',
-        updatedAt: new Date()
+        updatedAt: serverTimestamp()
       }, { merge: true });
 
       await refetchUserProfile();
       toast({ title: 'Boutique Updated', description: 'Your public storefront has been updated.' });
     } catch (e) {
       console.error("Boutique Update Error:", e);
-      toast({ variant: 'destructive', title: 'Update Failed' });
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Check your internet connection and try again.' });
     } finally {
       setIsUpdatingProfile(false);
     }

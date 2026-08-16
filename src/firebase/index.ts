@@ -4,11 +4,13 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 interface FirebaseSdks {
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
+  storage: FirebaseStorage;
 }
 
 let sdkCache: FirebaseSdks | null = null;
@@ -31,6 +33,7 @@ export function initializeFirebase(): FirebaseSdks {
       firebaseApp: app,
       auth: getAuth(app),
       firestore: getFirestore(app),
+      storage: getStorage(app),
     };
     return sdkCache;
   }
@@ -49,6 +52,7 @@ export function initializeFirebase(): FirebaseSdks {
     firebaseApp: app,
     auth: getAuth(app),
     firestore: getFirestore(app),
+    storage: getStorage(app),
   };
 
   return sdkCache;
