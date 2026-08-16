@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,13 +11,21 @@ import { HeroSettings } from './components/hero-settings';
 import { LocationDiscovery } from './components/location-discovery';
 import { EmailSettings } from './components/email-settings';
 import { ActivityTracker } from './components/activity-tracker';
-import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, BarChart3 } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, BarChart3, User, MapPin, Phone, Factory, Info } from 'lucide-react';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { WholesalerRequest } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 export default function AdminSettingsPage() {
   const { user, isUserLoading } = useUser();
@@ -25,6 +33,7 @@ export default function AdminSettingsPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [selectedRequest, setSelectedRequest] = useState<WholesalerRequest | null>(null);
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
@@ -45,6 +54,7 @@ export default function AdminSettingsPage() {
       const docRef = doc(firestore, 'wholesalerRequests', request.id);
       await updateDoc(docRef, { status });
       toast({ title: `Partner ${status}` });
+      setSelectedRequest(null);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update Failed' });
     }
@@ -107,34 +117,128 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         <TabsContent value="partners">
-          <Card>
-            <CardHeader>
-              <CardTitle>Wholesaler Applications</CardTitle>
+          <Card className="rounded-[2.5rem] shadow-xl border-primary/5">
+            <CardHeader className="p-8">
+              <CardTitle className="text-3xl font-headline text-primary">Wholesaler Applications</CardTitle>
+              <CardDescription>Review and approve new partnership requests from across the textile heritage regions.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-8 pb-8">
               {isRequestsLoading ? (
-                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full rounded-2xl" />
               ) : !requests || requests.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">No partnership applications.</p>
+                <div className="text-center py-20 border-2 border-dashed rounded-[2rem] bg-muted/20">
+                   <Handshake className="h-16 w-16 text-muted-foreground mx-auto opacity-20 mb-4" />
+                   <p className="text-muted-foreground font-medium">No partnership applications pending.</p>
+                </div>
               ) : (
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {requests.map((req) => (
-                    <div key={req.id} className="p-6 border rounded-2xl flex justify-between gap-6">
-                      <div className="space-y-2">
-                        <h3 className="font-headline text-xl text-primary">{req.name}</h3>
-                        <p className="text-sm text-muted-foreground">{req.address}</p>
-                        <Badge variant={req.status === 'approved' ? 'default' : 'secondary'}>{req.status}</Badge>
-                      </div>
-                      {req.status === 'pending' && (
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" onClick={() => handleUpdateRequest(req, 'approved')} className="bg-green-600">
-                            <Check className="h-4 w-4 mr-1" /> Approve
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleUpdateRequest(req, 'rejected')}>
-                            <X className="h-4 w-4 mr-1" /> Reject
-                          </Button>
+                    <div 
+                      key={req.id} 
+                      className="p-6 border rounded-[2rem] bg-card hover:shadow-lg transition-all border-primary/5 flex flex-col justify-between gap-6"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-headline text-2xl text-primary leading-tight">{req.name}</h3>
+                          <Badge variant={req.status === 'approved' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase font-black text-[9px] tracking-widest">
+                            {req.status}
+                          </Badge>
                         </div>
-                      )}
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <MapPin className="h-3 w-3" /> {req.address.split(',')[0]}...
+                        </p>
+                        <div className="flex gap-2">
+                          {req.isManufacturer && (
+                            <Badge variant="outline" className="text-[8px] border-primary/20 text-primary uppercase font-bold">
+                              Manufacturer
+                            </Badge>
+                          )}
+                           <Badge variant="outline" className="text-[8px] border-accent/20 text-accent-foreground uppercase font-bold">
+                              {req.sareeTypes.split(',')[0]}
+                            </Badge>
+                        </div>
+                      </div>
+                      
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full rounded-xl h-12 border-primary/10 hover:bg-primary/5 group">
+                            <Info className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" /> Review Application
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px] rounded-[2.5rem] border-none shadow-2xl overflow-hidden p-0">
+                          <div className="bg-primary p-10 text-primary-foreground">
+                             <DialogHeader>
+                                <div className="flex justify-between items-center mb-4">
+                                  <Badge className="bg-white/20 text-white border-none uppercase text-[10px] font-black tracking-[0.2em]">{req.status}</Badge>
+                                  <span className="text-[10px] opacity-60 font-bold">{req.createdAt?.seconds ? new Date(req.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
+                                </div>
+                                <DialogTitle className="text-4xl font-headline leading-tight">{req.name}</DialogTitle>
+                             </DialogHeader>
+                          </div>
+                          
+                          <div className="p-10 space-y-8 bg-background">
+                            <div className="grid grid-cols-2 gap-8">
+                               <div className="space-y-2">
+                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                   <User className="h-3 w-3" /> Representative
+                                 </h4>
+                                 <p className="font-bold text-primary">{req.name}</p>
+                                 <p className="text-sm text-muted-foreground">{req.email}</p>
+                               </div>
+                               <div className="space-y-2">
+                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                   <Phone className="h-3 w-3" /> Contact Details
+                                 </h4>
+                                 <p className="font-bold text-primary">{req.phone}</p>
+                                 {req.isManufacturer && (
+                                   <div className="flex items-center gap-2 text-green-600">
+                                     <Factory className="h-3 w-3" />
+                                     <span className="text-[10px] font-bold uppercase tracking-widest">Self-Manufacturing Unit</span>
+                                   </div>
+                                 )}
+                               </div>
+                            </div>
+
+                            <div className="space-y-2">
+                               <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                 <MapPin className="h-3 w-3" /> Business Address
+                               </h4>
+                               <p className="text-sm leading-relaxed text-muted-foreground bg-muted/30 p-4 rounded-2xl italic">
+                                 {req.address}
+                               </p>
+                            </div>
+
+                            <div className="space-y-2">
+                               <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Textile Portfolio</h4>
+                               <div className="flex flex-wrap gap-2">
+                                  {req.sareeTypes.split(',').map((type, i) => (
+                                    <Badge key={i} variant="secondary" className="px-3 py-1 text-[10px] uppercase font-bold border-primary/5">
+                                      {type.trim()}
+                                    </Badge>
+                                  ))}
+                               </div>
+                            </div>
+
+                            {req.status === 'pending' && (
+                              <DialogFooter className="pt-6 border-t border-primary/5 flex gap-3">
+                                <Button 
+                                  onClick={() => handleUpdateRequest(req, 'approved')} 
+                                  className="flex-1 h-14 rounded-2xl bg-primary text-white shadow-lg"
+                                >
+                                  <Check className="h-5 w-5 mr-2" /> Approve Partner
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => handleUpdateRequest(req, 'rejected')}
+                                  className="flex-1 h-14 rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/5"
+                                >
+                                  <X className="h-5 w-5 mr-2" /> Reject
+                                </Button>
+                              </DialogFooter>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   ))}
                 </div>
