@@ -1,6 +1,6 @@
 'use client';
-    
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import {
   DocumentReference,
   onSnapshot,
@@ -22,8 +22,6 @@ export interface UseDocResult<T> {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
- * 
- * IMPORTANT: The reference passed to this hook MUST be memoized using `useMemoFirebase`.
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
@@ -31,18 +29,24 @@ export function useDoc<T = any>(
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  
+  const subscriptionRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedDocRef) {
       setData(null);
       setIsLoading(false);
       setError(null);
+      subscriptionRef.current = null;
       return;
     }
 
-    if (!isMemoized(memoizedDocRef)) {
-      console.warn('useDoc: memoizedDocRef was not properly memoized using useMemoFirebase.');
+    if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedDocRef)) {
+      console.warn('useDoc: memoizedDocRef was not properly memoized. This can trigger SDK assertion errors (ca9).');
     }
+
+    const currentSubId = Math.random().toString(36).substring(7);
+    subscriptionRef.current = currentSubId;
 
     setIsLoading(true);
     setError(null);
@@ -50,6 +54,8 @@ export function useDoc<T = any>(
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
+        if (subscriptionRef.current !== currentSubId) return;
+
         if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
@@ -59,6 +65,8 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (serverError: FirestoreError) => {
+        if (subscriptionRef.current !== currentSubId) return;
+
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
@@ -71,7 +79,10 @@ export function useDoc<T = any>(
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      subscriptionRef.current = null;
+      unsubscribe();
+    };
   }, [memoizedDocRef]);
 
   return { data, isLoading, error };

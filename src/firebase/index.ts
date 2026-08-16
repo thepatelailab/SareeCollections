@@ -15,44 +15,43 @@ let sdkCache: FirebaseSdks | null = null;
 
 /**
  * Initializes Firebase and returns the singleton instances of the SDKs.
- * Uses a module-level cache to ensure idempotency across the application lifecycle.
+ * Uses a module-level cache and standard SDK checks to ensure idempotency.
  */
 export function initializeFirebase(): FirebaseSdks {
+  // 1. Check local module cache
   if (sdkCache) {
     return sdkCache;
   }
 
-  // Check if an app is already initialized (standard Firebase SDK check)
-  if (getApps().length > 0) {
-    const app = getApp();
-    sdkCache = getSdks(app);
+  // 2. Check if an app is already initialized via global Firebase registry
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    const app = existingApps[0];
+    sdkCache = {
+      firebaseApp: app,
+      auth: getAuth(app),
+      firestore: getFirestore(app),
+    };
     return sdkCache;
   }
 
+  // 3. Initialize new app instance
   let app: FirebaseApp;
   try {
-    // Attempt automatic initialization (often used in Firebase App Hosting)
+    // Attempt automatic initialization (App Hosting / Google Environment)
     app = initializeApp();
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Firebase automatic initialization failed, falling back to config object.', e);
-    }
+    // Fallback to manual config
     app = initializeApp(firebaseConfig);
   }
 
-  sdkCache = getSdks(app);
-  return sdkCache;
-}
-
-/**
- * Helper to get SDK instances for a given FirebaseApp.
- */
-export function getSdks(firebaseApp: FirebaseApp): FirebaseSdks {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+  sdkCache = {
+    firebaseApp: app,
+    auth: getAuth(app),
+    firestore: getFirestore(app),
   };
+
+  return sdkCache;
 }
 
 export * from './provider';

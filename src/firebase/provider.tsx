@@ -46,7 +46,7 @@ export interface UserHookResult {
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-// A WeakMap to track memoized Firestore references/queries without mutating the objects themselves.
+// A WeakMap to track memoized Firestore references/queries without mutating the objects.
 const memoizedRefs = new WeakMap<object, boolean>();
 
 /**
@@ -132,9 +132,11 @@ export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
  */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   const memoized = useMemo(factory, deps);
-  if (memoized && typeof memoized === 'object') {
-    memoizedRefs.set(memoized as object, true);
-  }
+  useEffect(() => {
+    if (memoized && typeof memoized === 'object') {
+      memoizedRefs.set(memoized as object, true);
+    }
+  }, [memoized]);
   return memoized;
 }
 
@@ -146,6 +148,9 @@ export function isMemoized(obj: any): boolean {
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading, userError } = useFirebase();
-  return { user, isUserLoading, userError };
+  const context = useContext(FirebaseContext);
+  if (!context) {
+    return { user: null, isUserLoading: true, userError: null };
+  }
+  return { user: context.user, isUserLoading: context.isUserLoading, userError: context.userError };
 };

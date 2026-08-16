@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -23,28 +23,33 @@ export interface UseCollectionResult<T> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * 
- * IMPORTANT: The reference or query passed to this hook MUST be memoized using `useMemoFirebase`.
  */
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
+  memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
 ): UseCollectionResult<T> {
-  type ResultItemType = WithId<T>;
-  const [data, setData] = useState<ResultItemType[] | null>(null);
+  const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  
+  // Track the current subscription to prevent race conditions during unmount/remount
+  const subscriptionRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
+      subscriptionRef.current = null;
       return;
     }
 
-    if (!isMemoized(memoizedTargetRefOrQuery)) {
-      console.warn('useCollection: memoizedTargetRefOrQuery was not properly memoized using useMemoFirebase. This can cause performance issues or internal Firestore errors.');
+    // Verification check for developer experience
+    if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedTargetRefOrQuery)) {
+      console.warn('useCollection: memoizedTargetRefOrQuery was not properly memoized. This can trigger SDK assertion errors (ca9).');
     }
+
+    const currentSubId = Math.random().toString(36).substring(7);
+    subscriptionRef.current = currentSubId;
 
     setIsLoading(true);
     setError(null);
@@ -52,20 +57,22 @@ export function useCollection<T = any>(
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        snapshot.forEach((doc) => {
-          results.push({ ...(doc.data() as T), id: doc.id });
-        });
+        // Only update state if this is still the active subscription
+        if (subscriptionRef.current !== currentSubId) return;
+
+        const results: WithId<T>[] = snapshot.docs.map(doc => ({
+          ...(doc.data() as T),
+          id: doc.id,
+        }));
+        
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (serverError: FirestoreError) => {
-        // Safe path extraction
-        const path: string = (memoizedTargetRefOrQuery as any).path 
-          || (memoizedTargetRefOrQuery as any)._query?.path?.toString() 
-          || 'unknown';
+        if (subscriptionRef.current !== currentSubId) return;
 
+        const path = (memoizedTargetRefOrQuery as any).path || 'query';
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
@@ -78,7 +85,10 @@ export function useCollection<T = any>(
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      subscriptionRef.current = null;
+      unsubscribe();
+    };
   }, [memoizedTargetRefOrQuery]);
 
   return { data, isLoading, error };
