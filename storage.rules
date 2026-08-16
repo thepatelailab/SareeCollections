@@ -8,12 +8,17 @@ service firebase.storage {
       allow read;
     }
 
-    // Allow authenticated users to write to the 'SareeCollection' directory
+    // Allow authenticated users to write to their own profile images (e.g., boutique banners)
+    match /users/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to write to the 'SareeCollection' directory for product images
     match /SareeCollection/{productId}/{fileName} {
       allow write: if request.auth != null;
     }
 
-    // Allow authenticated users to write to the 'settings' directory
+    // Allow authenticated users to write to the 'settings' directory (e.g., hero banners)
     match /settings/{fileName} {
       allow write: if request.auth != null;
     }
