@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 import { sendOrderEmails } from '@/app/actions/email-actions';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection } from 'firebase/firestore';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -81,6 +81,31 @@ export function CheckoutForm() {
     },
   });
 
+  const checkStockAvailability = async () => {
+    if (!firestore) return true;
+    
+    const outOfStockItems: string[] = [];
+    
+    for (const item of cartItems) {
+      const productRef = doc(firestore, 'SareeCollection', item.id);
+      const productSnap = await getDoc(productRef);
+      
+      if (productSnap.exists()) {
+        const currentStock = productSnap.data().stock ?? 0;
+        if (currentStock <= 0) {
+          outOfStockItems.push(item.name);
+        }
+      }
+    }
+    
+    if (outOfStockItems.length > 0) {
+      setError(`Sorry, the following items are currently out of stock: ${outOfStockItems.join(', ')}. Please remove them from your cart to proceed.`);
+      return false;
+    }
+    
+    return true;
+  };
+
   const handlePayment = async (formData: z.infer<typeof checkoutSchema>) => {
     const activeKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || discoveredKey;
 
@@ -98,6 +123,13 @@ export function CheckoutForm() {
     setError(null);
 
     try {
+      // 1. Check stock before calling payment API
+      const isAvailable = await checkStockAvailability();
+      if (!isAvailable) {
+        setIsProcessing(false);
+        return;
+      }
+
       const apiBase = getApiBase();
       const response = await fetch(`${apiBase}/create-order`, {
         method: 'POST',
@@ -129,7 +161,6 @@ export function CheckoutForm() {
         name: "SareeDukan.Com",
         order_id: order.id,
         handler: async function () {
-          // 1. Synchronize Shipping Details to Firestore (as backend main.py lacks this logic)
           if (firestore) {
              const orderRef = doc(firestore, 'orders', order.id);
              await updateDoc(orderRef, {
@@ -180,7 +211,7 @@ export function CheckoutForm() {
         </CardHeader>
         <CardContent className="p-8">
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold">
+            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold animate-in fade-in slide-in-from-top-1">
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
               <p>{error}</p>
             </div>

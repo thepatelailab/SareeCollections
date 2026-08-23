@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store } from 'lucide-react';
+import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store, AlertTriangle } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from './providers/cart-provider';
@@ -77,21 +77,26 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <Tabs defaultValue="model" className="w-full">
             <div className="relative aspect-[4/5] rounded-[2rem] md:rounded-[3rem] overflow-hidden border shadow-2xl bg-muted">
               <TabsContent value="saree" className="mt-0 h-full">
-                <Image src={product.sareeImg} alt={product.name} fill className="object-cover" />
+                <Image src={product.sareeImg} alt={product.name} fill className={cn("object-cover", isOutOfStock && "grayscale opacity-70")} />
               </TabsContent>
               <TabsContent value="model" className="mt-0 h-full">
-                <Image src={product.modelImg} alt={`Model in ${product.name}`} fill className="object-cover" />
+                <Image src={product.modelImg} alt={`Model in ${product.name}`} fill className={cn("object-cover", isOutOfStock && "grayscale opacity-70")} />
               </TabsContent>
               
-              <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
+              <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10 flex flex-col items-end gap-3">
                 {product.variety && (
                   <Badge className="bg-primary text-primary-foreground py-1.5 px-4 md:py-2 md:px-6 text-[10px] md:text-sm font-headline tracking-widest uppercase shadow-2xl border-0">
                     {product.variety}
                   </Badge>
                 )}
+                {isOutOfStock && (
+                  <Badge variant="destructive" className="px-6 py-2 md:px-8 md:py-3 text-[12px] md:text-base font-black tracking-[0.3em] uppercase rounded-full shadow-2xl ring-4 ring-white animate-pulse">
+                    SOLD OUT
+                  </Badge>
+                )}
               </div>
 
-              {/* Interaction Overlay - Always visible on details page for accessibility */}
+              {/* Interaction Overlay */}
               <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-20">
                 <div className="flex gap-3">
                   <Button 
@@ -143,8 +148,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </div>
 
             <TabsList className="grid grid-cols-2 mt-6 bg-muted/40 p-1.5 rounded-2xl border backdrop-blur-sm h-12 md:h-14">
-              <TabsTrigger value="model" className="rounded-xl font-black py-2.5 uppercase text-[9px] md:text-[11px] tracking-widest data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md transition-all">Model</TabsTrigger>
-              <TabsTrigger value="saree" className="rounded-xl font-black py-2.5 uppercase text-[9px] md:text-[11px] tracking-widest data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md transition-all">Fabric</TabsTrigger>
+              <TabsTrigger value="model" className="rounded-xl font-black py-2.5 uppercase text-[9px] md:text-[11px] tracking-widest data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md transition-all">Model Preview</TabsTrigger>
+              <TabsTrigger value="saree" className="rounded-xl font-black py-2.5 uppercase text-[9px] md:text-[11px] tracking-widest data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md transition-all">Product Detail</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -169,7 +174,10 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               <span className="text-4xl md:text-5xl font-black text-primary tracking-tight">INR {product.price}</span>
             </div>
             {isOutOfStock ? (
-              <Badge variant="destructive" className="px-4 py-1.5 text-[10px] font-black rounded-lg">OUT OF STOCK</Badge>
+              <div className="flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 px-5 py-2 rounded-xl">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="text-sm font-black uppercase tracking-widest">Out of Stock</span>
+              </div>
             ) : (
               <Badge className="text-green-700 border-green-200 bg-green-50 px-4 py-1.5 text-[10px] font-black rounded-lg">LIMITED STOCK</Badge>
             )}
@@ -206,16 +214,21 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <div className="flex flex-col gap-4">
             <Button 
               size="lg" 
-              className="w-full py-8 text-xl md:text-2xl font-headline bg-primary hover:bg-primary/90 shadow-2xl rounded-2xl transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:hover:translate-y-0"
-              onClick={() => addToCart(product)}
+              className={cn(
+                "w-full py-8 text-xl md:text-2xl font-headline shadow-2xl rounded-2xl transition-all",
+                isOutOfStock ? "bg-muted text-muted-foreground cursor-not-allowed hover:bg-muted" : "bg-primary hover:bg-primary/90 hover:-translate-y-1 active:scale-95"
+              )}
+              onClick={() => !isOutOfStock && addToCart(product)}
               disabled={isOutOfStock}
             >
-              {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Reserve This Piece</>}
+              {isOutOfStock ? 'Currently Unavailable' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Reserve This Piece</>}
             </Button>
             
-            <p className="text-center text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
-              <span className="text-primary font-black">{product.shares || 0}</span> Global Style Explorers Shared This Piece
-            </p>
+            {!isOutOfStock && (
+              <p className="text-center text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
+                <span className="text-primary font-black">{product.shares || 0}</span> Global Style Explorers Shared This Piece
+              </p>
+            )}
           </div>
         </div>
       </div>

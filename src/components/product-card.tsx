@@ -75,7 +75,6 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="group flex flex-col overflow-hidden rounded-[2.5rem] shadow-sm transition-all duration-500 hover:shadow-2xl border border-border bg-card/50">
-      {/* Top section with images and metrics overlay */}
       <div className="relative">
         <Link href={`/products/${product.id}`} className="block relative">
           <CardContent className="p-0 relative">
@@ -98,18 +97,18 @@ export function ProductCard({ product }: ProductCardProps) {
                   value="saree" 
                   className="text-[7px] h-7 px-3 rounded-full font-black uppercase tracking-[0.1em] data-[state=active]:bg-accent data-[state=active]:text-accent-foreground transition-all"
                 >
-                  Fabric
+                  {product.category === 'crochet' ? 'Item' : 'Fabric'}
                 </TabsTrigger>
               </TabsList>
               
-              <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500">
+              <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
                 {product.variety && (
-                  <Badge className="bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold">
+                  <Badge className="bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold opacity-0 group-hover:opacity-100 transition-all duration-500">
                     {product.variety}
                   </Badge>
                 )}
                 {isOutOfStock && (
-                  <Badge variant="destructive" className="font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-black">
+                  <Badge variant="destructive" className="font-headline text-[7px] py-1.5 px-4 rounded-full tracking-[0.2em] uppercase border-0 shadow-2xl font-black z-30 ring-2 ring-white">
                     Sold Out
                   </Badge>
                 )}
@@ -121,7 +120,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     src={product.sareeImg}
                     alt={product.name}
                     fill
-                    className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-80")}
+                    className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-60")}
                     data-ai-hint={product.sareeImgHint}
                   />
                 </div>
@@ -133,7 +132,7 @@ export function ProductCard({ product }: ProductCardProps) {
                       src={product.modelImg}
                       alt={`Model wearing ${product.name}`}
                       fill
-                      className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-80")}
+                      className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-60")}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full bg-muted">
@@ -201,7 +200,6 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </div>
 
-      {/* Information area */}
       <div className="flex flex-1 flex-col justify-between p-6">
         <CardHeader className="p-0">
           <Link href={`/products/${product.id}`}>
@@ -218,7 +216,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </Link>
           )}
           <CardDescription className="pt-2 text-[10px] italic uppercase tracking-[0.2em] font-black opacity-50">
-            Heritage Handloom Collection
+            {product.category === 'crochet' ? 'Handcrafted Artisan Work' : 'Heritage Handloom Collection'}
           </CardDescription>
         </CardHeader>
         
@@ -234,7 +232,7 @@ export function ProductCard({ product }: ProductCardProps) {
               e.stopPropagation();
               addToCart(product);
             }}
-            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95 disabled:opacity-50 disabled:grayscale"
+            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
             aria-label={isOutOfStock ? "Sold Out" : `Add ${product.name} to cart`}
             disabled={isOutOfStock}
           >
