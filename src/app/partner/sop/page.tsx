@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Handshake, LayoutDashboard, Package, ArrowRight, BookOpen, Sparkles } from 'lucide-react';
+import { Handshake, LayoutDashboard, Package, ArrowRight, BookOpen, Sparkles, Flower2 } from 'lucide-react';
 
 export default function PartnerSOPHub() {
   const steps = [
@@ -27,6 +27,13 @@ export default function PartnerSOPHub() {
       icon: Package,
       href: "/partner/sop/uploading-products",
       color: "bg-green-50 text-green-600"
+    },
+    {
+      title: "Crochet Hub Rules",
+      description: "Specific operational standards for artisan crochet and lifestyle rendering.",
+      icon: Flower2,
+      href: "/partner/sop/crochet-hub",
+      color: "bg-orange-50 text-orange-600"
     }
   ];
 
@@ -43,7 +50,7 @@ export default function PartnerSOPHub() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 gap-8">
         {steps.map((step, idx) => (
           <Card key={idx} className="rounded-[2.5rem] border-primary/5 shadow-xl hover:shadow-2xl transition-all group overflow-hidden">
             <CardHeader className="p-8">
