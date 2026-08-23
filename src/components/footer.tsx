@@ -1,6 +1,6 @@
 import { Logo } from './logo';
 import Link from 'next/link';
-import { Handshake } from 'lucide-react';
+import { Handshake, BookOpen } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -30,6 +30,11 @@ export function Footer() {
                 </Link>
               </li>
               <li><Link href="/partner/login" className="hover:text-primary transition-colors">Partner Dashboard</Link></li>
+              <li>
+                <Link href="/partner/sop" className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <BookOpen className="h-4 w-4" /> Partner SOP
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
