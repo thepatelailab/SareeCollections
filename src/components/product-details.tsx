@@ -77,10 +77,10 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <Tabs defaultValue="model" className="w-full">
             <div className="relative aspect-[4/5] rounded-[2rem] md:rounded-[3rem] overflow-hidden border shadow-2xl bg-muted">
               <TabsContent value="saree" className="mt-0 h-full">
-                <Image src={product.sareeImg} alt={product.name} fill className={cn("object-cover", isOutOfStock && "grayscale opacity-70")} />
+                <Image src={product.sareeImg} alt={product.name} fill className="object-cover" />
               </TabsContent>
               <TabsContent value="model" className="mt-0 h-full">
-                <Image src={product.modelImg} alt={`Model in ${product.name}`} fill className={cn("object-cover", isOutOfStock && "grayscale opacity-70")} />
+                <Image src={product.modelImg} alt={`Model in ${product.name}`} fill className="object-cover" />
               </TabsContent>
               
               <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10 flex flex-col items-end gap-3">

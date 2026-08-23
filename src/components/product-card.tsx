@@ -120,7 +120,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     src={product.sareeImg}
                     alt={product.name}
                     fill
-                    className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-60")}
+                    className="object-cover transition-transform duration-1000 group-hover:scale-105"
                     data-ai-hint={product.sareeImgHint}
                   />
                 </div>
@@ -132,7 +132,7 @@ export function ProductCard({ product }: ProductCardProps) {
                       src={product.modelImg}
                       alt={`Model wearing ${product.name}`}
                       fill
-                      className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-60")}
+                      className="object-cover transition-transform duration-1000 group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full bg-muted">
