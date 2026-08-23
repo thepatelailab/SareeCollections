@@ -12,7 +12,7 @@ import React, {
 import { collection, doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
 import { useFirestore, useCollection, useFirebase, useMemoFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import type { Product, UserProfile } from '@/lib/types';
+import type { Product, UserProfile, ProductCategory } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 export interface SareeVariety {
@@ -95,8 +95,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return collection(firestore, 'sareeVarieties');
   }, [firestore]);
 
-  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
+  const { data: productsData, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
   const { data: customVarieties, isLoading: areVarietiesLoading } = useCollection<SareeVariety>(varietiesCollection);
+
+  const products = useMemo(() => {
+    if (!productsData) return [];
+    // Ensure all products have a category, defaulting to saree for legacy data
+    return productsData.map(p => ({
+      ...p,
+      category: p.category || 'saree'
+    }));
+  }, [productsData]);
 
   const sareeVarieties = useMemo(() => {
     const list = [...(customVarieties || [])];

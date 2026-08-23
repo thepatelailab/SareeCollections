@@ -1,185 +1,56 @@
 
 {
   "entities": {
-    "Saree": {
-      "title": "Saree",
+    "Product": {
+      "title": "Product",
+      "description": "A heritage product in the marketplace (Saree, Crochet, or Lehenga).",
       "type": "object",
-      "description": "Represents a saree product in the online store.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Saree entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the saree."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the saree."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the saree."
-        },
-        "wholesalePrice": {
-          "type": "number",
-          "description": "The wholesale price for partners."
-        },
-        "stock": {
-          "type": "number",
-          "description": "Available stock quantity."
-        },
-        "sareeImg": {
-          "type": "string",
-          "description": "URL of the original saree image stored in Firebase Storage.",
-          "format": "uri"
-        },
-        "modelImg": {
-          "type": "string",
-          "description": "URL of the AI-generated avatar image of the saree stored in Firebase Storage.",
-          "format": "uri"
-        },
-        "sareeImgHint": {
-          "type": "string",
-          "description": "Hint for AI generation or search."
-        },
-        "variety": {
-          "type": "string",
-          "description": "The regional variety of the saree."
-        },
-        "likes": {
-          "type": "number",
-          "description": "Number of likes this product has received."
-        },
-        "shares": {
-          "type": "number",
-          "description": "Number of times this product has been shared."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "UID of the admin or wholesaler who uploaded this."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "price",
-        "sareeImg",
-        "modelImg",
-        "sareeImgHint"
-      ]
-    },
-    "WholesalerRequest": {
-      "title": "Wholesaler Request",
-      "type": "object",
-      "description": "A request from a user to become a wholesaler partner.",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string", "description": "Wholesaler name" },
-        "isManufacturer": { "type": "boolean", "description": "Whether they own a manufacturing unit" },
-        "address": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "sareeTypes": { "type": "string", "description": "Types of sarees available" },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "wholesalePrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "sareeImg": { "type": "string", "description": "Original product image URL" },
+        "sareeImgHint": { "type": "string" },
+        "modelImg": { "type": "string", "description": "AI generated lifestyle/model image URL" },
+        "variety": { "type": "string" },
+        "category": { "type": "string", "enum": ["saree", "crochet", "lehenga"] },
+        "likes": { "type": "number" },
+        "shares": { "type": "number" },
+        "ownerId": { "type": "string" }
       },
-      "required": ["name", "email", "phone", "status"]
+      "required": ["name", "price", "description", "category"]
     },
     "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile information.",
+      "title": "UserProfile",
+      "description": "Information about a user or partner boutique.",
       "type": "object",
       "properties": {
-        "role": {
-          "type": "string",
-          "description": "The role of the user.",
-          "enum": ["customer", "admin", "wholesaler"]
-        }
+        "role": { "type": "string", "enum": ["customer", "admin", "wholesaler"] },
+        "email": { "type": "string", "format": "email" },
+        "businessName": { "type": "string" },
+        "bannerUrl": { "type": "string" }
       },
       "required": ["role"]
-    },
-    "Country": {
-      "title": "Country",
-      "type": "object",
-      "description": "A country where sarees are popular.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" }
-      },
-      "required": ["id", "name"]
-    },
-    "State": {
-      "title": "State",
-      "type": "object",
-      "description": "A state within a country.",
-      "properties": {
-        "id": { "type": "string" },
-        "countryId": { "type": "string" },
-        "name": { "type": "string" }
-      },
-      "required": ["id", "countryId", "name"]
-    },
-    "SareeVariety": {
-      "title": "Saree Variety",
-      "type": "object",
-      "description": "A specific type of saree discovered via AI.",
-      "properties": {
-        "id": { "type": "string" },
-        "stateId": { "type": "string" },
-        "name": { "type": "string" },
-        "description": { "type": "string" }
-      },
-      "required": ["id", "stateId", "name"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["email"]
   },
   "firestore": {
-    "/SareeCollection/{sareeId}": {
-      "schema": {
-        "$ref": "#/backend/entities/Saree"
-      },
-      "description": "Stores all saree product information."
-    },
-    "/wholesalerRequests/{requestId}": {
-      "schema": {
-        "$ref": "#/backend/entities/WholesalerRequest"
-      },
-      "description": "Stores applications for becoming a partner."
-    },
-    "/countries/{countryId}": {
-      "schema": { "$ref": "#/backend/entities/Country" },
-      "description": "List of countries."
-    },
-    "/states/{stateId}": {
-      "schema": { "$ref": "#/backend/entities/State" },
-      "description": "List of states per country."
-    },
-    "/sareeVarieties/{varietyId}": {
-      "schema": { "$ref": "#/backend/entities/SareeVariety" },
-      "description": "Famous saree varieties discovered via AI."
-    },
-    "/settings/{settingId}": {
-      "schema": {
-        "type": "object",
-        "properties": {
-          "imageUrl": { "type": "string" }
-        }
-      },
-      "description": "Global application settings like hero banner image."
+    "/SareeCollection/{productId}": {
+      "schema": "Product",
+      "description": "Unified collection of all heritage products across all categories."
     },
     "/users/{userId}": {
-      "schema": {
-        "$ref": "#/backend/entities/UserProfile"
-      },
-      "description": "Stores public-facing profile information for each user."
+      "schema": "UserProfile",
+      "description": "User profiles and boutique information."
+    },
+    "/orders/{orderId}": {
+      "schema": { "type": "object" },
+      "description": "Platform orders and transactions."
     }
   }
 }

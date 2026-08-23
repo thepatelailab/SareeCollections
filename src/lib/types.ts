@@ -1,4 +1,6 @@
 
+export type ProductCategory = 'saree' | 'crochet' | 'lehenga';
+
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export interface Product {
   sareeImgHint: string;
   modelImg: string;
   variety?: string;
+  category: ProductCategory;
   likes?: number;
   shares?: number;
   ownerId?: string;
