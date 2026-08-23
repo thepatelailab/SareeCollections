@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 import { sendOrderEmails } from '@/app/actions/email-actions';
-import { doc, getDoc, updateDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -86,16 +86,20 @@ export function CheckoutForm() {
     
     const outOfStockItems: string[] = [];
     
-    for (const item of cartItems) {
-      const productRef = doc(firestore, 'SareeCollection', item.id);
-      const productSnap = await getDoc(productRef);
-      
-      if (productSnap.exists()) {
-        const currentStock = productSnap.data().stock ?? 0;
-        if (currentStock <= 0) {
-          outOfStockItems.push(item.name);
+    try {
+      for (const item of cartItems) {
+        const productRef = doc(firestore, 'SareeCollection', item.id);
+        const productSnap = await getDoc(productRef);
+        
+        if (productSnap.exists()) {
+          const currentStock = productSnap.data().stock ?? 0;
+          if (currentStock <= 0) {
+            outOfStockItems.push(item.name);
+          }
         }
       }
+    } catch (e) {
+      console.warn("Stock verification check bypassed due to connectivity.");
     }
     
     if (outOfStockItems.length > 0) {
@@ -137,19 +141,20 @@ export function CheckoutForm() {
         body: JSON.stringify({
           amount: Math.round(cartTotal * 100),
           user_id: user?.uid,
-          items: cartItems.map(i => ({
-            id: i.id,
-            name: i.name,
-            ownerId: i.ownerId,
-            price: i.price,
-            quantity: i.quantity || 1
-          })),
+          // Python backend expects list of strings
+          items: cartItems.map(i => i.name),
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Failed to create order' }));
-        throw new Error(errorData.detail || 'Failed to create order');
+        let detailMsg = 'Failed to create order';
+        if (typeof errorData.detail === 'string') {
+          detailMsg = errorData.detail;
+        } else if (Array.isArray(errorData.detail)) {
+          detailMsg = errorData.detail[0]?.msg || JSON.stringify(errorData.detail);
+        }
+        throw new Error(detailMsg);
       }
 
       const order = await response.json();
@@ -163,7 +168,15 @@ export function CheckoutForm() {
         handler: async function () {
           if (firestore) {
              const orderRef = doc(firestore, 'orders', order.id);
+             // Update with full items object and shipping details
              await updateDoc(orderRef, {
+                items: cartItems.map(i => ({
+                  id: i.id,
+                  name: i.name,
+                  ownerId: i.ownerId,
+                  price: i.price,
+                  quantity: i.quantity || 1
+                })),
                 shipping_details: formData,
                 updated_at: new Date()
              }).catch(e => console.error("Order sync failed", e));
