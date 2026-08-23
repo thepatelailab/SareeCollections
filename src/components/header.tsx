@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, Search, Settings } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Search, Settings, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/components/providers/cart-provider';
@@ -49,7 +49,7 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center flex-1 justify-center px-4">
           <NavigationMenu>
-            <NavigationMenuList className="gap-4 lg:gap-6">
+            <NavigationMenuList className="gap-2 lg:gap-4">
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-1.5 h-auto rounded-full transition-all font-headline text-[9px] font-black border-none shadow-sm uppercase tracking-[0.2em]">
                   SAREE
@@ -68,13 +68,23 @@ export function Header() {
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>
+
               <NavigationMenuItem>
-                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-0 transition-opacity uppercase tracking-[0.2em]")}>
+                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-4 transition-opacity uppercase tracking-[0.2em] flex items-center gap-2")}>
+                  <Link href="/crochet">
+                    <Sparkles className="h-3 w-3 text-accent-foreground" /> CROCHET HUB
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-4 transition-opacity uppercase tracking-[0.2em]")}>
                   <Link href="/lehenga">LEHENGA</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
+              
               <NavigationMenuItem>
-                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-0 transition-opacity uppercase tracking-[0.2em]")}>
+                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-4 transition-opacity uppercase tracking-[0.2em]")}>
                   <Link href="/about">ABOUT US</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>

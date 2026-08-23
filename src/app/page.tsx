@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useMemo } from 'react';
 import { ProductGrid } from '@/components/product-grid';
@@ -14,12 +13,14 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link';
 import Image from 'next/image';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, LayoutGrid, Flower2, Shirt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Home() {
   const { products, isAdmin, isLoading, heroImageUrl, isHeroImageLoading, sareeVarieties } = useAppContext();
   
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedVariety, setSelectedVariety] = useState<string>('all');
   const [selectedPartner, setSelectedPartner] = useState<string>('all');
 
@@ -33,11 +34,12 @@ export default function Home() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
+      const categoryMatch = selectedCategory === 'all' || p.category === selectedCategory;
       const varietyMatch = selectedVariety === 'all' || p.variety === selectedVariety;
       const partnerMatch = selectedPartner === 'all' || p.ownerId === selectedPartner;
-      return varietyMatch && partnerMatch;
+      return categoryMatch && varietyMatch && partnerMatch;
     });
-  }, [products, selectedVariety, selectedPartner]);
+  }, [products, selectedCategory, selectedVariety, selectedPartner]);
 
   const currentHeroImage = heroImageUrl || 'https://images.unsplash.com/photo-1610992383821-DA203653b619?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
@@ -68,9 +70,9 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="w-full">
               <h2 className="text-2xl md:text-5xl font-headline text-primary lowercase leading-tight">
-                most reviewed collections
+                curated heritage collections
               </h2>
-              <p className="text-sm md:text-base text-muted-foreground mt-2">Discover our highest-rated traditional handlooms.</p>
+              <p className="text-sm md:text-base text-muted-foreground mt-2">Discover our highest-rated traditional handlooms and artisan crafts.</p>
             </div>
             {isAdmin && (
               <div className="mt-2 md:mt-0 w-full md:w-auto">
@@ -78,6 +80,24 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {/* Category Tabs */}
+          <Tabs defaultValue="all" onValueChange={setSelectedCategory} className="w-full overflow-x-auto">
+            <TabsList className="bg-muted/40 p-1 rounded-2xl border border-primary/5 inline-flex min-w-full md:min-w-0">
+              <TabsTrigger value="all" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <LayoutGrid className="h-3.5 w-3.5" /> All Crafts
+              </TabsTrigger>
+              <TabsTrigger value="saree" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <Shirt className="h-3.5 w-3.5" /> Sarees
+              </TabsTrigger>
+              <TabsTrigger value="crochet" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <Flower2 className="h-3.5 w-3.5" /> Crochet Hub
+              </TabsTrigger>
+              <TabsTrigger value="lehenga" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest">
+                Lehenga
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           {/* Filter Bar */}
           <div className="flex flex-wrap items-center gap-4 bg-white/50 p-4 rounded-3xl border border-primary/5 backdrop-blur-sm">
@@ -134,7 +154,7 @@ export default function Home() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed">
-            <p className="text-muted-foreground font-headline text-xl">No sarees found matching these criteria.</p>
+            <p className="text-muted-foreground font-headline text-xl">No products found in this category.</p>
           </div>
         ) : (
           <ProductGrid products={filteredProducts} />

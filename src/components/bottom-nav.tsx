@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Home, Search, Heart, User, Menu } from 'lucide-react';
+import { Home, Search, Heart, User, Menu, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -57,13 +57,13 @@ export function BottomNav() {
             <span className="text-[10px] font-bold uppercase tracking-tighter">Menu</span>
           </button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-[2.5rem] p-8">
+        <SheetContent side="bottom" className="h-[75vh] rounded-t-[2.5rem] p-8">
           <SheetHeader className="mb-8">
             <SheetTitle className="flex justify-center">
               <Logo />
             </SheetTitle>
           </SheetHeader>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="saree" className="border-none">
                 <AccordionTrigger className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5 hover:no-underline">
@@ -85,6 +85,11 @@ export function BottomNav() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            
+            <Link href="/crochet" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5 flex items-center justify-between group">
+              Crochet Hub <Sparkles className="h-5 w-5 text-accent-foreground opacity-40 group-hover:opacity-100 transition-opacity" />
+            </Link>
+            
             <Link href="/lehenga" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5">Lehenga</Link>
             <Link href="/about" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5">About Us</Link>
           </div>
