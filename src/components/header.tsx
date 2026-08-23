@@ -1,6 +1,7 @@
+
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, Search, Settings, Sparkles } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Search, Settings, Sparkles, ShieldAlert } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/components/providers/cart-provider';
@@ -98,6 +99,14 @@ export function Header() {
             <Input placeholder="Search..." className="pr-8 h-8 w-32 rounded-full bg-muted/30 border-none focus-visible:ring-primary/10 text-[9px]" />
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           </div>
+
+          {isAdmin && (
+             <Button variant="outline" size="sm" asChild className="hidden md:flex h-9 rounded-full border-primary/20 bg-primary/5 text-primary font-black uppercase text-[8px] tracking-[0.1em] px-4 gap-2">
+                <Link href="/admin/settings">
+                  <ShieldAlert className="h-3 w-3" /> Admin Control
+                </Link>
+             </Button>
+          )}
           
           <Button variant="ghost" size="icon" asChild className="relative rounded-full h-9 w-9 text-primary hover:bg-primary/5">
             <Link href="/cart">

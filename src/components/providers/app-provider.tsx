@@ -15,6 +15,8 @@ import { useFirestore, useCollection, useFirebase, useMemoFirebase, useUser, err
 import type { Product, UserProfile, ProductCategory } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
+const ADMIN_EMAIL = 'bp.brpl@gmail.com';
+
 export interface SareeVariety {
   id: string;
   name: string;
@@ -58,7 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isHeroImageLoading, setIsHeroImageLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!firestore || !user?.uid) {
+    if (!firestore || !user?.uid || user.isAnonymous) {
       setUserProfile(null);
       return;
     }
@@ -69,21 +71,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       setUserProfile(null);
     }
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, user?.isAnonymous]);
 
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
   useEffect(() => {
+    // Explicitly check for admin email as a hardcoded safety fallback
+    const isSuperAdminEmail = user?.email === ADMIN_EMAIL;
+    
     if (userProfile) {
-      setIsAdmin(userProfile.role === 'admin');
+      setIsAdmin(userProfile.role === 'admin' || isSuperAdminEmail);
       setIsWholesaler(userProfile.role === 'wholesaler');
+    } else if (isSuperAdminEmail) {
+      setIsAdmin(true);
+      setIsWholesaler(false);
     } else {
       setIsAdmin(false);
       setIsWholesaler(false);
     }
-  }, [userProfile]);
+  }, [userProfile, user?.email]);
 
   const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -100,7 +108,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const products = useMemo(() => {
     if (!productsData) return [];
-    // Ensure all products have a category, defaulting to saree for legacy data
     return productsData.map(p => ({
       ...p,
       category: p.category || 'saree'
