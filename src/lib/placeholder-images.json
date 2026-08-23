@@ -23,6 +23,12 @@
       "description": "A modern black georgette saree with subtle sequin work. It's lightweight, drapes beautifully, and is ideal for evening parties and events.",
       "imageUrl": "https://images.unsplash.com/photo-1551033654-352edc254c67?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxibGFjayUyMGdlb3JnZXR0ZSUyMHNhcmVlfGVufDB8fHx8MTc1OTY1NjczMXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "black georgette saree"
+    },
+    {
+      "id": "lehenga-coming-soon",
+      "description": "A stunning bridal lehenga with intricate embroidery, representing our upcoming collection.",
+      "imageUrl": "https://picsum.photos/seed/lehenga-heritage-v1/1200/800",
+      "imageHint": "lehenga choli"
     }
   ]
 }
