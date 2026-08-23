@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -110,12 +109,16 @@ export function CheckoutForm() {
             id: i.id,
             name: i.name,
             ownerId: i.ownerId,
-            price: i.price
+            price: i.price,
+            quantity: i.quantity || 1
           })),
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create order');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to create order' }));
+        throw new Error(errorData.detail || 'Failed to create order');
+      }
 
       const order = await response.json();
 

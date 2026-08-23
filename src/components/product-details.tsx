@@ -40,6 +40,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const [isLiked, setIsLiked] = useState(false);
 
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const isOutOfStock = (product.stock ?? 0) <= 0;
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -167,7 +168,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               <span className="text-[10px] md:text-xs text-muted-foreground line-through opacity-50 font-black uppercase tracking-widest">Original Value: INR {Math.round(product.price * 1.3)}</span>
               <span className="text-4xl md:text-5xl font-black text-primary tracking-tight">INR {product.price}</span>
             </div>
-            <Badge className="text-green-700 border-green-200 bg-green-50 px-4 py-1.5 text-[10px] font-black rounded-lg">LIMITED STOCK</Badge>
+            {isOutOfStock ? (
+              <Badge variant="destructive" className="px-4 py-1.5 text-[10px] font-black rounded-lg">OUT OF STOCK</Badge>
+            ) : (
+              <Badge className="text-green-700 border-green-200 bg-green-50 px-4 py-1.5 text-[10px] font-black rounded-lg">LIMITED STOCK</Badge>
+            )}
           </div>
 
           <Separator className="bg-primary/10 h-px" />
@@ -201,10 +206,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <div className="flex flex-col gap-4">
             <Button 
               size="lg" 
-              className="w-full py-8 text-xl md:text-2xl font-headline bg-primary hover:bg-primary/90 shadow-2xl rounded-2xl transition-all hover:-translate-y-1 active:scale-95"
+              className="w-full py-8 text-xl md:text-2xl font-headline bg-primary hover:bg-primary/90 shadow-2xl rounded-2xl transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:hover:translate-y-0"
               onClick={() => addToCart(product)}
+              disabled={isOutOfStock}
             >
-              <ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Reserve This Piece
+              {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Reserve This Piece</>}
             </Button>
             
             <p className="text-center text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">

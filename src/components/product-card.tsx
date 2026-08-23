@@ -49,6 +49,8 @@ export function ProductCard({ product }: ProductCardProps) {
     ? `${window.location.origin}/products/${product.id}` 
     : '';
 
+  const isOutOfStock = (product.stock ?? 0) <= 0;
+
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -100,11 +102,18 @@ export function ProductCard({ product }: ProductCardProps) {
                 </TabsTrigger>
               </TabsList>
               
-              {product.variety && (
-                <Badge className="absolute top-4 right-4 z-20 bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold opacity-0 group-hover:opacity-100 transition-all duration-500">
-                  {product.variety}
-                </Badge>
-              )}
+              <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                {product.variety && (
+                  <Badge className="bg-primary text-primary-foreground font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-bold">
+                    {product.variety}
+                  </Badge>
+                )}
+                {isOutOfStock && (
+                  <Badge variant="destructive" className="font-headline text-[7px] py-1 px-3 rounded-full tracking-widest uppercase border-0 shadow-lg font-black">
+                    Sold Out
+                  </Badge>
+                )}
+              </div>
 
               <TabsContent value="saree" className="mt-0">
                 <div className="aspect-[4/5] relative overflow-hidden">
@@ -112,7 +121,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     src={product.sareeImg}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                    className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-80")}
                     data-ai-hint={product.sareeImgHint}
                   />
                 </div>
@@ -124,7 +133,7 @@ export function ProductCard({ product }: ProductCardProps) {
                       src={product.modelImg}
                       alt={`Model wearing ${product.name}`}
                       fill
-                      className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                      className={cn("object-cover transition-transform duration-1000 group-hover:scale-105", isOutOfStock && "grayscale opacity-80")}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full bg-muted">
@@ -225,11 +234,11 @@ export function ProductCard({ product }: ProductCardProps) {
               e.stopPropagation();
               addToCart(product);
             }}
-            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95"
-            aria-label={`Add ${product.name} to cart`}
+            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95 disabled:opacity-50 disabled:grayscale"
+            aria-label={isOutOfStock ? "Sold Out" : `Add ${product.name} to cart`}
+            disabled={isOutOfStock}
           >
-            <ShoppingBag className="mr-2.5 h-4.5 w-4.5" />
-            Acquire
+            {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-2.5 h-4.5 w-4.5" /> Acquire</>}
           </Button>
         </div>
       </div>

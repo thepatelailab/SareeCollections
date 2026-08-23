@@ -51,10 +51,16 @@ app.add_middleware(
 
 # --- Pydantic Models ---
 
+class OrderItem(BaseModel):
+    id: str
+    name: str
+    price: float
+    quantity: int = 1
+
 class CreateOrderRequest(BaseModel):
     amount: int = Field(..., ge=100) # Amount in paise
     user_id: str
-    items: list[str] = []
+    items: list[OrderItem] = []
 
 # --- Helper Functions ---
 
@@ -69,6 +75,18 @@ def process_successful_payment(user_id: str, amount_paise: int, payment_id: str,
     }
 
     try:
+        # Get order items to decrement stock
+        order_doc = order_ref.get()
+        if order_doc.exists:
+            order_data = order_doc.to_dict()
+            items = order_data.get('items', [])
+            for item in items:
+                product_id = item.get('id')
+                qty = item.get('quantity', 1)
+                if product_id:
+                    prod_ref = db.collection("SareeCollection").document(product_id)
+                    prod_ref.update({"stock": firestore.Increment(-qty)})
+
         order_ref.update(transaction_data)
         return True
     except Exception as e:
@@ -94,6 +112,24 @@ async def create_order(data: CreateOrderRequest):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay client NOT initialized. Check server env variables.")
     
+    # --- Stock Validation ---
+    out_of_stock_items = []
+    for item in data.items:
+        product_ref = db.collection("SareeCollection").document(item.id)
+        product_doc = product_ref.get()
+        if product_doc.exists:
+            current_stock = product_doc.to_dict().get('stock', 0)
+            if current_stock < item.quantity:
+                out_of_stock_items.append(item.name)
+        else:
+            out_of_stock_items.append(f"{item.name} (Not Found)")
+
+    if out_of_stock_items:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Out of Stock: {', '.join(out_of_stock_items)}. Please remove these from your cart."
+        )
+
     try:
         receipt_id = f"rcpt_{int(datetime.now(timezone.utc).timestamp())}_{data.user_id[:5]}"
         
@@ -115,7 +151,7 @@ async def create_order(data: CreateOrderRequest):
             "status": "pending",
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
-            "items": data.items,
+            "items": [item.dict() for item in data.items],
             "receipt": receipt_id
         })
 
