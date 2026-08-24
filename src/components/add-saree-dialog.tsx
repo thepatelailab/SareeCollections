@@ -34,6 +34,7 @@ export function AddSareeDialog() {
   const [category, setCategory] = useState<ProductCategory>('saree');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('10');
   const [description, setDescription] = useState('');
   const [variety, setVariety] = useState('');
   const [backgroundDescription, setBackgroundDescription] = useState('in a professional heritage museum setting with soft spotlights');
@@ -131,6 +132,7 @@ export function AddSareeDialog() {
       await addProduct({
         name,
         price: parseFloat(price),
+        stock: parseInt(stock),
         description,
         variety: variety || undefined,
         category,
@@ -150,6 +152,7 @@ export function AddSareeDialog() {
     setCategory('saree');
     setName('');
     setPrice('');
+    setStock('10');
     setDescription('');
     setVariety('');
     setSareeImageFile(null);
@@ -192,6 +195,17 @@ export function AddSareeDialog() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-[#FFFFFF]/50 border-none h-12 rounded-xl" />
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-[#2D1B2E]">Price (INR)</Label>
+                  <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-[#FFFFFF]/50 border-none h-12 rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-[#2D1B2E]">Stock Count</Label>
+                  <Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="bg-[#FFFFFF]/50 border-none h-12 rounded-xl" />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-bold text-[#2D1B2E]">Variety / Style</Label>
                 <Select onValueChange={setVariety} value={variety}>
@@ -208,11 +222,6 @@ export function AddSareeDialog() {
                     )}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-[#2D1B2E]">Price (INR)</Label>
-                <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-[#FFFFFF]/50 border-none h-12 rounded-xl" />
               </div>
 
               <div className="space-y-2">
@@ -333,4 +342,3 @@ export function AddSareeDialog() {
     </Dialog>
   );
 }
-
