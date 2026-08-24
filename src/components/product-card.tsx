@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -73,6 +74,10 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
+  // Phase 2 Optimization: Prefer lightweight thumbnails for the grid view
+  const displaySareeImg = product.thumbnailImg || product.sareeImg;
+  const displayModelImg = product.thumbnailModelImg || product.modelImg;
+
   return (
     <Card className="group flex flex-col overflow-hidden rounded-[2.5rem] shadow-sm transition-all duration-500 hover:shadow-2xl border border-border bg-card/50">
       <div className="relative">
@@ -117,7 +122,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <TabsContent value="saree" className="mt-0">
                 <div className="aspect-[4/5] relative overflow-hidden">
                   <Image
-                    src={product.sareeImg}
+                    src={displaySareeImg}
                     alt={product.name}
                     fill
                     className="object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -127,9 +132,9 @@ export function ProductCard({ product }: ProductCardProps) {
               </TabsContent>
               <TabsContent value="model" className="mt-0">
                  <div className="aspect-[4/5] relative overflow-hidden">
-                  {product.modelImg ? (
+                  {displayModelImg ? (
                     <Image
-                      src={product.modelImg}
+                      src={displayModelImg}
                       alt={`Model wearing ${product.name}`}
                       fill
                       className="object-cover transition-transform duration-1000 group-hover:scale-105"

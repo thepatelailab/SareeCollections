@@ -66,6 +66,39 @@ const DEFAULT_VARIETIES = [
   { id: "v6", name: "Chanderi", description: "Lightweight sheer elegance.", stateId: "mp" },
 ];
 
+/**
+ * Client-side image resizer using Canvas API.
+ * This avoids the need for Cloud Functions for basic thumbnail generation.
+ */
+async function createThumbnail(fileOrUrl: File | string, maxWidth = 400): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = maxWidth / img.width;
+      canvas.width = maxWidth;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob failed'));
+      }, 'image/jpeg', 0.8);
+    };
+    img.onerror = (e) => reject(e);
+    if (typeof fileOrUrl === 'string') {
+      img.src = fileOrUrl;
+    } else {
+      img.src = URL.createObjectURL(fileOrUrl);
+    }
+  });
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { firestore, auth } = useFirebase();
   const { user, isUserLoading } = useUser();
@@ -234,9 +267,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newDocRef = doc(collection(firestore, 'SareeCollection'));
     const productId = newDocRef.id;
 
+    // 1. Prepare Paths
     const sareeImageRef = ref(storage, `SareeCollection/${productId}/saree.jpg`);
     const modelImageRef = ref(storage, `SareeCollection/${productId}/model.jpg`);
+    const thumbSareeRef = ref(storage, `SareeCollection/${productId}/thumb_saree.jpg`);
+    const thumbModelRef = ref(storage, `SareeCollection/${productId}/thumb_model.jpg`);
 
+    // 2. Generate Thumbnails Client-Side (Phase 2 Optimization)
+    const sareeThumbBlob = await createThumbnail(newProductData.sareeImageFile);
+    const modelThumbBlob = await createThumbnail(newProductData.modelImageDataUrl);
+
+    // 3. Upload Originals
     const sareeUploadSnapshot = await uploadBytes(sareeImageRef, newProductData.sareeImageFile);
     const sareeImgUrl = await getDownloadURL(sareeUploadSnapshot.ref);
 
@@ -244,6 +285,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const modelImageBlob = await modelImageResponse.blob();
     const modelUploadSnapshot = await uploadBytes(modelImageRef, modelImageBlob);
     const modelImgUrl = await getDownloadURL(modelUploadSnapshot.ref);
+
+    // 4. Upload Thumbnails
+    const thumbSareeSnap = await uploadBytes(thumbSareeRef, sareeThumbBlob);
+    const thumbSareeUrl = await getDownloadURL(thumbSareeSnap.ref);
+
+    const thumbModelSnap = await uploadBytes(thumbModelRef, modelThumbBlob);
+    const thumbModelUrl = await getDownloadURL(thumbModelSnap.ref);
     
     const { sareeImageFile: _, modelImageDataUrl: __, ...restOfProductData } = newProductData;
 
@@ -252,6 +300,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...restOfProductData,
       sareeImg: sareeImgUrl,
       modelImg: modelImgUrl,
+      thumbnailImg: thumbSareeUrl,
+      thumbnailModelImg: thumbModelUrl,
       likes: 0,
       shares: 0,
       ownerId: auth.currentUser.uid,

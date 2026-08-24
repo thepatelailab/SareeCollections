@@ -11,6 +11,8 @@ export interface Product {
   sareeImg: string;
   sareeImgHint: string;
   modelImg: string;
+  thumbnailImg?: string;
+  thumbnailModelImg?: string;
   variety?: string;
   category: ProductCategory;
   likes?: number;
