@@ -127,7 +127,6 @@ export function CheckoutForm() {
     setError(null);
 
     try {
-      // 1. Check stock before calling payment API
       const isAvailable = await checkStockAvailability();
       if (!isAvailable) {
         setIsProcessing(false);
@@ -141,7 +140,6 @@ export function CheckoutForm() {
         body: JSON.stringify({
           amount: Math.round(cartTotal * 100),
           user_id: user?.uid,
-          // Python backend expects list of strings
           items: cartItems.map(i => i.name),
         }),
       });
@@ -168,7 +166,6 @@ export function CheckoutForm() {
         handler: async function () {
           if (firestore) {
              const orderRef = doc(firestore, 'orders', order.id);
-             // Update with full items object and shipping details
              await updateDoc(orderRef, {
                 items: cartItems.map(i => ({
                   id: i.id,
@@ -197,7 +194,7 @@ export function CheckoutForm() {
 
           toast({ title: 'Success!', description: 'Order confirmed and details synced.' });
           clearCart();
-          router.push('/');
+          router.push(`/order-success?orderId=${order.id}`);
         },
         prefill: {
           name: formData.name,
