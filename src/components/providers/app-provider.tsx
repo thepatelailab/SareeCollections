@@ -9,13 +9,27 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import { collection, doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  increment, 
+  query, 
+  orderBy, 
+  limit, 
+  getDocs, 
+  startAfter,
+  DocumentSnapshot
+} from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
-import { useFirestore, useCollection, useFirebase, useMemoFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, useFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Product, UserProfile, ProductCategory } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 const ADMIN_EMAIL = 'bp.brpl@gmail.com';
+const PAGE_SIZE = 12;
 
 export interface SareeVariety {
   id: string;
@@ -31,6 +45,9 @@ interface AppContextType {
   sareeVarieties: SareeVariety[];
   addProduct: (product: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }) => Promise<void>;
   isLoading: boolean;
+  isFetchingMore: boolean;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
   heroImageUrl: string | null;
   updateHeroImage: (image: File | Blob) => Promise<void>;
   isHeroImageLoading: boolean;
@@ -56,6 +73,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isWholesaler, setIsWholesaler] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  const [sareeVarieties, setSareeVarieties] = useState<SareeVariety[]>([]);
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
   const [isHeroImageLoading, setIsHeroImageLoading] = useState(true);
 
@@ -78,9 +102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    // Explicitly check for admin email as a hardcoded safety fallback
     const isSuperAdminEmail = user?.email === ADMIN_EMAIL;
-    
     if (userProfile) {
       setIsAdmin(userProfile.role === 'admin' || isSuperAdminEmail);
       setIsWholesaler(userProfile.role === 'wholesaler');
@@ -93,36 +115,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userProfile, user?.email]);
 
-  const productsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'SareeCollection');
+  // Initial Product Fetch
+  useEffect(() => {
+    async function initFetch() {
+      if (!firestore) return;
+      setIsLoadingProducts(true);
+      try {
+        const q = query(
+          collection(firestore, 'SareeCollection'), 
+          orderBy('id', 'desc'), 
+          limit(PAGE_SIZE)
+        );
+        const snap = await getDocs(q);
+        const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+        setProducts(fetched);
+        setLastDoc(snap.docs[snap.docs.length - 1] || null);
+        setHasMore(snap.docs.length === PAGE_SIZE);
+      } catch (e) {
+        console.error("Fetch failed", e);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    }
+    initFetch();
   }, [firestore]);
 
-  const varietiesCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'sareeVarieties');
-  }, [firestore]);
+  // Load More Functionality
+  const loadMore = async () => {
+    if (!firestore || !lastDoc || isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    try {
+      const q = query(
+        collection(firestore, 'SareeCollection'),
+        orderBy('id', 'desc'),
+        startAfter(lastDoc),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+      
+      setProducts(prev => [...prev, ...fetched]);
+      setLastDoc(snap.docs[snap.docs.length - 1] || null);
+      setHasMore(snap.docs.length === PAGE_SIZE);
+    } catch (e) {
+      console.error("Load more failed", e);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
 
-  const { data: productsData, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
-  const { data: customVarieties, isLoading: areVarietiesLoading } = useCollection<SareeVariety>(varietiesCollection);
-
-  const products = useMemo(() => {
-    if (!productsData) return [];
-    return productsData.map(p => ({
-      ...p,
-      category: p.category || 'saree'
-    }));
-  }, [productsData]);
-
-  const sareeVarieties = useMemo(() => {
-    const list = [...(customVarieties || [])];
-    DEFAULT_VARIETIES.forEach(def => {
-        if (!list.find(v => v.name.toLowerCase() === def.name.toLowerCase())) {
+  // Varieties Fetch (One-time)
+  useEffect(() => {
+    async function fetchVarieties() {
+      if (!firestore) return;
+      try {
+        const snap = await getDocs(collection(firestore, 'sareeVarieties'));
+        const custom = snap.docs.map(d => ({ ...d.data(), id: d.id } as SareeVariety));
+        const list = [...custom];
+        DEFAULT_VARIETIES.forEach(def => {
+          if (!list.find(v => v.name.toLowerCase() === def.name.toLowerCase())) {
             list.push(def);
-        }
-    });
-    return list;
-  }, [customVarieties]);
+          }
+        });
+        setSareeVarieties(list);
+      } catch (e) {
+        setSareeVarieties(DEFAULT_VARIETIES);
+      }
+    }
+    fetchVarieties();
+  }, [firestore]);
 
   const fetchHeroImageUrl = useCallback(async () => {
     if (!firestore) return;
@@ -142,7 +203,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [firestore]);
 
-
   useEffect(() => {
     if (auth && !user && !isUserLoading) {
       initiateAnonymousSignIn(auth);
@@ -161,6 +221,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateDoc(docRef, { [metric]: increment(1) }).catch(e => {
        console.error("Metric update failed", e);
     });
+    // Optimistic UI update
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p));
   };
 
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
@@ -196,6 +258,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     
     await setDoc(newDocRef, finalProduct);
+    setProducts(prev => [finalProduct, ...prev]);
   };
   
   const updateHeroImage = async (image: File | Blob) => {
@@ -222,22 +285,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-
   const contextValue = useMemo(
     () => ({
       isAdmin,
       isWholesaler,
-      products: products || [],
+      products,
       sareeVarieties,
       addProduct,
-      isLoading: isUserLoading || areProductsLoading || areVarietiesLoading,
+      isLoading: isUserLoading || isLoadingProducts,
+      isFetchingMore,
+      hasMore,
+      loadMore,
       heroImageUrl,
       updateHeroImage,
       isHeroImageLoading,
       refetchUserProfile: fetchUserProfile,
       incrementProductMetric,
     }),
-    [isAdmin, isWholesaler, products, sareeVarieties, isUserLoading, areProductsLoading, areVarietiesLoading, heroImageUrl, isHeroImageLoading, addProduct, updateHeroImage, fetchUserProfile]
+    [isAdmin, isWholesaler, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, updateHeroImage, fetchUserProfile]
   );
 
   return (
@@ -248,7 +313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
+    throw new Error('useAppContext must be used within a AppProvider');
   }
   return context;
 };

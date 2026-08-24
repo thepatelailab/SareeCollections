@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo } from 'react';
 import { ProductGrid } from '@/components/product-grid';
@@ -13,12 +14,14 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link';
 import Image from 'next/image';
-import { Filter, X, LayoutGrid, Flower2, Shirt } from 'lucide-react';
+import { Filter, X, LayoutGrid, Flower2, Shirt, ArrowDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+const PAGE_SIZE = 12;
+
 export default function Home() {
-  const { products, isAdmin, isLoading, heroImageUrl, isHeroImageLoading, sareeVarieties } = useAppContext();
+  const { products, isAdmin, isLoading, heroImageUrl, isHeroImageLoading, sareeVarieties, hasMore, loadMore, isFetchingMore } = useAppContext();
   
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedVariety, setSelectedVariety] = useState<string>('all');
@@ -144,7 +147,7 @@ export default function Home() {
         
         {isLoading ? (
           <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
-            {[...Array(3)].map((_, i) => (
+            {[...Array(PAGE_SIZE)].map((_, i) => (
               <div key={i} className="space-y-4">
                 <Skeleton className="aspect-[4/5] w-full rounded-2xl" />
                 <Skeleton className="h-6 w-3/4" />
@@ -157,7 +160,27 @@ export default function Home() {
             <p className="text-muted-foreground font-headline text-xl">No products found in this category.</p>
           </div>
         ) : (
-          <ProductGrid products={filteredProducts} />
+          <div className="space-y-16">
+            <ProductGrid products={filteredProducts} />
+            
+            {hasMore && (
+              <div className="flex justify-center pb-8">
+                <Button 
+                  onClick={loadMore} 
+                  disabled={isFetchingMore}
+                  variant="outline"
+                  className="rounded-full px-12 h-14 border-primary/10 hover:bg-primary hover:text-white font-headline text-xl lowercase transition-all shadow-xl group"
+                >
+                  {isFetchingMore ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <ArrowDown className="mr-2 h-5 w-5 transition-transform group-hover:translate-y-1" />
+                  )}
+                  discover more pieces
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </>
