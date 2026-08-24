@@ -7,14 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingBag, TrendingUp, AlertCircle, BarChart3, Star, Heart, Share2 } from 'lucide-react';
+import { useAppContext } from '@/components/providers/app-provider';
 
 export function ActivityTracker() {
   const firestore = useFirestore();
+  const { isAdmin } = useAppContext();
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Only run this broad query if the user is confirmed as an admin
+    if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(15));
-  }, [firestore]);
+  }, [firestore, isAdmin]);
 
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery as any);
 

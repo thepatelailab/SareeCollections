@@ -70,6 +70,7 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       async (serverError: FirestoreError) => {
+        // Safety check: if the component unmounted or the query changed, ignore the error
         if (subscriptionRef.current !== currentSubId) return;
 
         // Attempt to extract a useful path for the error reporter
@@ -85,7 +86,11 @@ export function useCollection<T = any>(
         setError(permissionError);
         setData(null);
         setIsLoading(false);
-        errorEmitter.emit('permission-error', permissionError);
+        
+        // Only emit if this is still relevant
+        if (subscriptionRef.current === currentSubId) {
+          errorEmitter.emit('permission-error', permissionError);
+        }
       }
     );
 
