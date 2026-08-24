@@ -18,6 +18,7 @@ export interface Product {
   likes?: number;
   shares?: number;
   ownerId?: string;
+  updatedAt?: any; // Added for sync logic in Phase 3
 }
 
 export interface CartItem extends Product {

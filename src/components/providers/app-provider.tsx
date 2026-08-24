@@ -21,12 +21,14 @@ import {
   limit, 
   getDocs, 
   startAfter,
-  DocumentSnapshot
+  DocumentSnapshot,
+  serverTimestamp
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
 import { useFirestore, useFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Product, UserProfile, ProductCategory } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { saveProductsToCache, getCachedProducts } from '@/lib/db-persistence';
 
 const ADMIN_EMAIL = 'bp.brpl@gmail.com';
 const PAGE_SIZE = 12;
@@ -148,11 +150,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userProfile, user?.email]);
 
-  // Initial Product Fetch
+  // Initial Product Fetch with Phase 3 Local Caching
   useEffect(() => {
     async function initFetch() {
       if (!firestore) return;
-      setIsLoadingProducts(true);
+      
+      // 1. Try loading from IndexedDB first (Instant Load)
+      try {
+        const cached = await getCachedProducts();
+        if (cached.length > 0) {
+          setProducts(cached);
+          setIsLoadingProducts(false); // Stop showing loading state immediately
+        }
+      } catch (e) {
+        console.warn("IndexedDB Load Failed:", e);
+      }
+
+      // 2. Fetch fresh data from Firestore to sync
       try {
         const q = query(
           collection(firestore, 'SareeCollection'), 
@@ -161,11 +175,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         );
         const snap = await getDocs(q);
         const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+        
+        // 3. Update state and save to Cache
         setProducts(fetched);
         setLastDoc(snap.docs[snap.docs.length - 1] || null);
         setHasMore(snap.docs.length === PAGE_SIZE);
+        
+        saveProductsToCache(fetched);
       } catch (e) {
-        console.error("Fetch failed", e);
+        console.error("Firestore Fetch failed", e);
       } finally {
         setIsLoadingProducts(false);
       }
@@ -173,7 +191,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     initFetch();
   }, [firestore]);
 
-  // Load More Functionality
+  // Load More Functionality with Cache Support
   const loadMore = async () => {
     if (!firestore || !lastDoc || isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
@@ -187,9 +205,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const snap = await getDocs(q);
       const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
       
-      setProducts(prev => [...prev, ...fetched]);
+      const newProducts = [...products, ...fetched];
+      setProducts(newProducts);
       setLastDoc(snap.docs[snap.docs.length - 1] || null);
       setHasMore(snap.docs.length === PAGE_SIZE);
+
+      // Persist the extended list
+      saveProductsToCache(fetched);
     } catch (e) {
       console.error("Load more failed", e);
     } finally {
@@ -255,7 +277,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
        console.error("Metric update failed", e);
     });
     // Optimistic UI update
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p));
+    setProducts(prev => {
+      const updated = prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
+      // We don't save metrics to IDB immediately to avoid heavy churn, 
+      // they'll be synced next time a fetch happens.
+      return updated;
+    });
   };
 
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
@@ -305,10 +332,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       likes: 0,
       shares: 0,
       ownerId: auth.currentUser.uid,
+      updatedAt: serverTimestamp(),
     };
     
     await setDoc(newDocRef, finalProduct);
     setProducts(prev => [finalProduct, ...prev]);
+    saveProductsToCache([finalProduct]);
   };
   
   const updateHeroImage = async (image: File | Blob) => {
