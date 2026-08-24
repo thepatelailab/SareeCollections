@@ -15,15 +15,16 @@ export default function MyOrdersPage() {
   const firestore = useFirestore();
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    // Only query if we have a real user ID and it's not anonymous
+    if (!firestore || !user?.uid || user.isAnonymous) return null;
     return query(
       collection(firestore, 'orders'),
       where('user_id', '==', user.uid),
       orderBy('created_at', 'desc')
     );
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, user?.isAnonymous]);
 
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery as any);
+  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
   if (isUserLoading || isLoading) {
     return (

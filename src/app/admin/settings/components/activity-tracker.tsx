@@ -11,17 +11,17 @@ import { useAppContext } from '@/components/providers/app-provider';
 
 export function ActivityTracker() {
   const firestore = useFirestore();
-  const { isAdmin } = useAppContext();
+  const { isAdmin, isLoading: isAppLoading } = useAppContext();
 
   const ordersQuery = useMemoFirebase(() => {
-    // Only run this broad query if the user is confirmed as an admin
-    if (!firestore || !isAdmin) return null;
+    // CRITICAL: Only run the global query if the user is explicitly an admin and the app is ready
+    if (!firestore || !isAdmin || isAppLoading) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(15));
-  }, [firestore, isAdmin]);
+  }, [firestore, isAdmin, isAppLoading]);
 
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery as any);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
-  if (isLoading) return <Skeleton className="h-64 w-full rounded-[2rem]" />;
+  if (isAppLoading || isOrdersLoading) return <Skeleton className="h-64 w-full rounded-[2.5rem]" />;
 
   const totalRevenue = orders?.reduce((acc, order) => acc + (order.amount_paise / 100), 0) || 0;
   const pendingShipments = orders?.filter(o => o.status === 'paid').length || 0;
