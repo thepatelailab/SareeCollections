@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HeroSettings } from './components/hero-settings';
 import { LocationDiscovery } from './components/location-discovery';
 import { EmailSettings } from './components/email-settings';
-import { ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, BarChart3, User, MapPin, Phone, Factory, Info } from 'lucide-react';
+import { ActivityTracker } from './components/activity-tracker';
+import { ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, Activity, MapPin } from 'lucide-react';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { WholesalerRequest } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -73,25 +74,32 @@ export default function AdminSettingsPage() {
         </div>
         <div>
           <h1 className="text-3xl md:text-4xl font-headline text-primary">Master Control Center</h1>
-          <p className="text-muted-foreground">Manage store operations and automation.</p>
+          <p className="text-muted-foreground">Manage store operations and track global activity.</p>
         </div>
       </div>
 
-      <Tabs defaultValue="appearance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[700px]">
-          <TabsTrigger value="appearance" className="flex items-center gap-2 text-xs">
-            <ImageIcon className="h-4 w-4" /> Appearance
+      <Tabs defaultValue="activity" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[850px] bg-muted/40 p-1 rounded-2xl h-14 border">
+          <TabsTrigger value="activity" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
+            <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
-          <TabsTrigger value="discovery" className="flex items-center gap-2 text-xs">
+          <TabsTrigger value="appearance" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
+            <ImageIcon className="h-4 w-4" /> Style
+          </TabsTrigger>
+          <TabsTrigger value="discovery" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
             <Sparkles className="h-4 w-4" /> Discovery
           </TabsTrigger>
-          <TabsTrigger value="partners" className="flex items-center gap-2 text-xs">
+          <TabsTrigger value="partners" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
             <Handshake className="h-4 w-4" /> Partners
           </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-2 text-xs">
-            <Mail className="h-4 w-4" /> Notifications
+          <TabsTrigger value="email" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
+            <Mail className="h-4 w-4" /> Emails
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="activity">
+          <ActivityTracker />
+        </TabsContent>
 
         <TabsContent value="appearance">
           <HeroSettings />
