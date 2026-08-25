@@ -14,15 +14,23 @@ export function ActivityTracker() {
   const { isAdmin, isLoading: isAppLoading } = useAppContext();
 
   const ordersQuery = useMemoFirebase(() => {
-    // CRITICAL: Prevent early execution. Only query if the user is verified as an Admin.
-    // If we query while isAdmin is false, Firestore Rules will reject it because there is no user_id filter.
-    if (!firestore || !isAdmin || isAppLoading) return null;
-    return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(15));
+    // CRITICAL: "Rules are Not Filters". We MUST NOT initiate a global query 
+    // until the context has definitively verified the user as an Admin.
+    if (!firestore || isAppLoading || !isAdmin) return null;
+    
+    return query(
+      collection(firestore, 'orders'), 
+      orderBy('created_at', 'desc'), 
+      limit(15)
+    );
   }, [firestore, isAdmin, isAppLoading]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
 
-  if (isAppLoading || isOrdersLoading) return <Skeleton className="h-64 w-full rounded-[2.5rem]" />;
+  // While app state or specific query is loading, show skeleton
+  if (isAppLoading || (ordersQuery && isOrdersLoading)) {
+    return <Skeleton className="h-64 w-full rounded-[2.5rem]" />;
+  }
 
   const totalRevenue = orders?.reduce((acc, order) => acc + (order.amount_paise / 100), 0) || 0;
   const pendingShipments = orders?.filter(o => o.status === 'paid').length || 0;

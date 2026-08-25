@@ -58,6 +58,7 @@ export function useCollection<T = any>(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
         // CRITICAL: Immediately ignore if this is no longer the active listener
+        // This prevents the ca9 assertion error during unmounts/re-renders
         if (subscriptionRef.current !== currentSubId) return;
 
         const results: WithId<T>[] = snapshot.docs.map(doc => ({
@@ -87,9 +88,7 @@ export function useCollection<T = any>(
         setIsLoading(false);
         
         // Emit only if the component is still interested in this specific query
-        if (subscriptionRef.current === currentSubId) {
-          errorEmitter.emit('permission-error', permissionError);
-        }
+        errorEmitter.emit('permission-error', permissionError);
       }
     );
 

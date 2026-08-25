@@ -25,13 +25,18 @@ export function PartnerOrders() {
   const [shippingInfo, setShippingInfo] = useState<Record<string, { courier: string, tracking: string }>>({});
 
   const ordersQuery = useMemoFirebase(() => {
-    // CRITICAL: Prevent early execution. Only query if the user is verified as a Wholesaler.
-    if (!firestore || !user?.uid || !isWholesaler || isAppLoading) return null;
+    // CRITICAL: "Rules are Not Filters". We MUST NOT initiate a collection list
+    // query until the user is confirmed as a Wholesaler. This prevents
+    // the security rules engine from denying a global request.
+    if (!firestore || !user?.uid || isAppLoading || !isWholesaler) return null;
+    
+    // We only fetch paid/shipped orders as wholesalers don't need to see pending attempts
     return query(collection(firestore, 'orders'), where('status', 'in', ['paid', 'shipped']));
   }, [firestore, user?.uid, isWholesaler, isAppLoading]);
 
   const { data: allOrders, isLoading } = useCollection<Order>(ordersQuery as any);
 
+  // Filter in-memory to only show orders containing this wholesaler's items
   const myOrders = allOrders?.filter(order => 
     order.items?.some(item => item.ownerId === user?.uid)
   ) || [];
@@ -61,7 +66,7 @@ export function PartnerOrders() {
     }
   };
 
-  if (isAppLoading || isLoading) return <Skeleton className="h-64 w-full" />;
+  if (isAppLoading || (ordersQuery && isLoading)) return <Skeleton className="h-64 w-full" />;
 
   if (myOrders.length === 0) {
     return (
