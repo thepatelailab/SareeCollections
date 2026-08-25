@@ -1,23 +1,38 @@
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc } from 'firebase/firestore';
 import { Order } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, Shirt, LayoutGrid, Printer } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, Shirt, LayoutGrid, Printer, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 const STEPS = ['paid', 'ready for packaging', 'shipped', 'delivered'];
 
 export default function MyOrdersPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [gstNumber, setGstNumber] = useState<string>('');
+
+  useEffect(() => {
+    async function fetchSettings() {
+      if (!firestore) return;
+      try {
+        const snap = await getDoc(doc(firestore, 'settings', 'email'));
+        if (snap.exists()) {
+          setGstNumber(snap.data().gstNumber || '');
+        }
+      } catch (err) {}
+    }
+    fetchSettings();
+  }, [firestore]);
 
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -54,6 +69,7 @@ export default function MyOrdersPage() {
             .invoice-box { max-width: 800px; margin: auto; }
             .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; border-bottom: 4px solid #40000A; padding-bottom: 20px; }
             .logo { font-family: 'Playfair Display', serif; font-size: 32px; color: #40000A; text-transform: lowercase; }
+            .gst-tag { font-size: 10px; font-weight: bold; color: #666; margin-top: 5px; background: #eee; padding: 2px 8px; border-radius: 4px; display: inline-block; }
             .title { font-family: 'Playfair Display', serif; font-size: 24px; color: #40000A; }
             .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #999; margin-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -69,6 +85,7 @@ export default function MyOrdersPage() {
               <div>
                 <div class="logo">SareeDukan.Com</div>
                 <p style="font-size: 12px; color: #666; margin-top: 5px;">Authentic Heritage Marketplace</p>
+                ${gstNumber ? `<div class="gst-tag">GSTIN: ${gstNumber.toUpperCase()}</div>` : ''}
               </div>
               <div style="text-align: right;">
                 <div class="title">Purchase Invoice</div>
