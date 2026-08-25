@@ -1,4 +1,3 @@
-
 import { MetadataRoute } from 'next'
 import { collection, getDocs, query, limit } from 'firebase/firestore'
 import { initializeFirebase } from '@/firebase'
@@ -10,7 +9,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static Pages
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${baseUrl}/crochet`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${baseUrl}/crochet`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${baseUrl}/partners`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
   ]
 

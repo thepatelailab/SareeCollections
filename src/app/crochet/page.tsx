@@ -15,6 +15,9 @@ export default function CrochetHubPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFCF0]">
+      <title>Crochet Hub | Handcrafted Artisan Decor & Accessories</title>
+      <meta name="description" content="Explore our curated collection of handcrafted crochet masterpieces. From home decor to fashion accessories, discover heritage stitching reimagined for modern life." />
+      
       {/* Decorative Header */}
       <section className="relative py-16 md:py-24 overflow-hidden bg-primary text-primary-foreground">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">

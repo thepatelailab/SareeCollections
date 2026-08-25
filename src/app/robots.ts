@@ -1,4 +1,3 @@
-
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
@@ -7,8 +6,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      allow: '/',
-      disallow: ['/admin/', '/partner/dashboard/', '/checkout/', '/cart/'],
+      allow: ['/', '/crochet', '/partners', '/products'],
+      disallow: ['/admin/', '/partner/dashboard/', '/checkout/', '/cart/', '/my-account/'],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   }

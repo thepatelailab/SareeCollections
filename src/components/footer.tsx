@@ -1,6 +1,6 @@
 import { Logo } from './logo';
 import Link from 'next/link';
-import { Handshake, BookOpen } from 'lucide-react';
+import { Handshake, BookOpen, Users } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -17,6 +17,7 @@ export function Footer() {
             <h4 className="font-headline text-lg mb-6 text-primary">Explore</h4>
             <ul className="space-y-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">
               <li><Link href="/#collection" className="hover:text-primary transition-colors">Collections</Link></li>
+              <li><Link href="/crochet" className="hover:text-primary transition-colors">Crochet Hub</Link></li>
               <li><Link href="/lehenga" className="hover:text-primary transition-colors">Lehenga</Link></li>
               <li><Link href="/about" className="hover:text-primary transition-colors">Our Story</Link></li>
             </ul>
@@ -25,11 +26,15 @@ export function Footer() {
             <h4 className="font-headline text-lg mb-6 text-primary">Partnership</h4>
             <ul className="space-y-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">
               <li>
+                <Link href="/partners" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
+                  <Users className="h-4 w-4" /> Artisan Partners
+                </Link>
+              </li>
+              <li>
                 <Link href="/become-a-partner" className="flex items-center gap-2 text-accent-foreground hover:opacity-80 transition-opacity">
                   <Handshake className="h-4 w-4" /> Become a Partner
                 </Link>
               </li>
-              <li><Link href="/partner/login" className="hover:text-primary transition-colors">Partner Dashboard</Link></li>
               <li>
                 <Link href="/partner/sop" className="flex items-center gap-2 hover:text-primary transition-colors">
                   <BookOpen className="h-4 w-4" /> Partner SOP
