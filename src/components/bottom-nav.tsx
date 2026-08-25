@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Home, Search, Heart, User, Menu, Sparkles } from 'lucide-react';
+import { Home, Search, Heart, User, Menu, Sparkles, Package } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -18,10 +18,12 @@ import {
 } from "@/components/ui/accordion"
 import { useAppContext } from '@/components/providers/app-provider';
 import { Logo } from './logo';
+import { useUser } from '@/firebase';
 
 export function BottomNav() {
   const pathname = usePathname();
   const { sareeVarieties } = useAppContext();
+  const { user } = useUser();
 
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
@@ -29,6 +31,8 @@ export function BottomNav() {
     { icon: Heart, label: 'Wishlist', href: '#' },
     { icon: User, label: 'Profile', href: '/login' },
   ];
+
+  const isLoggedIn = user && !user.isAnonymous;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-primary/5 px-6 pb-6 pt-3 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
@@ -64,6 +68,12 @@ export function BottomNav() {
             </SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-4">
+            {isLoggedIn && (
+              <Link href="/my-account/orders" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5 flex items-center justify-between group">
+                My Orders <Package className="h-5 w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            )}
+
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="saree" className="border-none">
                 <AccordionTrigger className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5 hover:no-underline">

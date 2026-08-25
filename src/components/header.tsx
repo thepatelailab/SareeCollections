@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, Search, Settings, ShieldAlert } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Search, Settings, Package } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/components/providers/cart-provider';
@@ -131,6 +131,11 @@ export function Header() {
                       {isAdmin && <span className="text-[9px] text-primary font-bold uppercase tracking-wider mt-0.5">Store Admin</span>}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="p-2.5">
+                      <Link href="/my-account/orders">
+                        <Package className="mr-2.5 h-4 w-4" /> My Orders
+                      </Link>
+                    </DropdownMenuItem>
                     {isAdmin && (
                       <DropdownMenuItem asChild className="p-2.5">
                         <Link href="/admin/settings"><Settings className="mr-2.5 h-4 w-4" />Settings</Link>
