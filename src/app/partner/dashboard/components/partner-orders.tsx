@@ -32,9 +32,9 @@ export function PartnerOrders() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [fulfillmentData, setFulfillmentData] = useState<Record<string, { courier: string; trackingId: string }>>({});
 
-  // CRITICAL: Guard query with isWholesaler and isRoleLoaded to prevent Permission Denied for standard customers
+  // CRITICAL: Strict guard to prevent unauthorized customers from triggering this collection list
   const globalOrdersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !isWholesaler || !isRoleLoaded) return null;
+    if (!firestore || !user?.uid || !isRoleLoaded || !isWholesaler) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(50));
   }, [firestore, user?.uid, isWholesaler, isRoleLoaded]);
 
@@ -102,6 +102,9 @@ export function PartnerOrders() {
       </div>
     );
   }
+
+  // If the user isn't actually a wholesaler but somehow arrived here, show nothing to avoid permission errors
+  if (!isWholesaler) return null;
 
   if (myRelevantOrders.length === 0) {
     return (

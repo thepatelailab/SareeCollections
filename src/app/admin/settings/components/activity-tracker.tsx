@@ -13,9 +13,9 @@ export function ActivityTracker() {
   const { firestore } = useFirestore();
   const { isAdmin, isRoleLoaded } = useAppContext();
 
+  // CRITICAL: Strictly guard this query so it only triggers if role is definitely verified as Admin
   const globalOrdersQuery = useMemoFirebase(() => {
-    // CRITICAL: Prevent "Permission Denied" by keeping query null until Admin status is locked
-    if (!firestore || !isAdmin || !isRoleLoaded) return null;
+    if (!firestore || !isRoleLoaded || !isAdmin) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(100));
   }, [firestore, isAdmin, isRoleLoaded]);
 
@@ -31,6 +31,9 @@ export function ActivityTracker() {
       </div>
     );
   }
+
+  // If the user isn't an admin but somehow arrived here, show nothing to avoid permission errors
+  if (!isAdmin) return null;
 
   const totalRevenue = orders?.reduce((acc, o) => acc + (o.amount_paise / 100), 0) || 0;
   const pendingOrders = orders?.filter(o => o.status === 'paid' || o.status === 'shipped').length || 0;

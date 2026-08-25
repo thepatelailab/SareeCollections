@@ -103,7 +103,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isWholesaler, setIsWholesaler] = useState(false);
   const [isRoleLoaded, setIsRoleLoaded] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
@@ -117,16 +116,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = useCallback(async () => {
     if (!firestore || !user?.uid) {
-      setUserProfile(null);
+      setIsAdmin(false);
+      setIsWholesaler(false);
       setIsRoleLoaded(!isUserLoading);
       return;
     }
     
-    // Super Admin Fast Path
+    // Super Admin Fast Path: bypass document lookup if email matches
     if (user.email === ADMIN_EMAIL) {
       setIsAdmin(true);
       setIsWholesaler(false);
       setIsRoleLoaded(true);
+      return;
     }
 
     try {
@@ -134,17 +135,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
         const profile = docSnap.data() as UserProfile;
-        setUserProfile(profile);
-        setIsAdmin(profile.role === 'admin' || user.email === ADMIN_EMAIL);
+        setIsAdmin(profile.role === 'admin');
         setIsWholesaler(profile.role === 'wholesaler');
       } else {
-        setUserProfile(null);
-        // If profile doesn't exist, they are a basic customer unless super admin
-        setIsAdmin(user.email === ADMIN_EMAIL);
+        setIsAdmin(false);
         setIsWholesaler(false);
       }
     } catch (e) {
-      console.warn("Profile fetch skipped due to permissions.");
+      // In case of permission errors during login sync, default to basic customer
+      console.warn("Profile fetch deferred.");
     } finally {
       setIsRoleLoaded(true);
     }
@@ -165,7 +164,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setIsLoadingProducts(false);
         }
       } catch (e) {
-        console.warn("IDB Load Bypass:", e);
+        console.warn("Cache load skipped.");
       }
 
       try {
@@ -183,7 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         saveProductsToCache(fetched);
       } catch (e) {
-        console.error("Firestore Sync bypass", e);
+        console.error("Product sync issue", e);
       } finally {
         setIsLoadingProducts(false);
       }
@@ -211,7 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       saveProductsToCache(fetched);
     } catch (e) {
-      console.error("Load more bypassed", e);
+      console.error("Load more issue", e);
     } finally {
       setIsFetchingMore(false);
     }
@@ -271,7 +270,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore) return;
     const docRef = doc(firestore, 'SareeCollection', productId);
     updateDoc(docRef, { [metric]: increment(1) }).catch(e => {
-       console.error("Metric sync delay", e);
+       console.error("Metric update error", e);
     });
     setProducts(prev => {
       return prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
@@ -280,7 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
     if (!firestore || !auth?.currentUser) {
-        throw new Error("Permission denied.");
+        throw new Error("Access denied.");
     }
 
     const storage = getStorage();
@@ -331,7 +330,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const updateHeroImage = async (image: File | Blob) => {
      if (!firestore || !isAdmin) {
-        throw new Error("Permission denied.");
+        throw new Error("Access denied.");
     }
     const storage = getStorage();
     const imageRef = ref(storage, 'settings/hero-image.jpg');
