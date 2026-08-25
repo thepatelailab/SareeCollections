@@ -16,7 +16,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Package, Truck, Loader2, CheckCircle2, User, MapPin } from 'lucide-react';
+import { Package, Truck, Loader2, CheckCircle2, User, MapPin, Mail, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/components/providers/app-provider';
@@ -113,13 +113,27 @@ export function PartnerOrders() {
             <div className="space-y-6">
                <div className="space-y-3">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                    <User className="h-4 w-4" /> Recipient
+                    <User className="h-4 w-4" /> Recipient Details
                   </h4>
-                  <div className="text-sm font-bold text-primary px-4 py-3 bg-muted/30 rounded-xl">
-                    {order.shipping_details?.name}
-                    <p className="text-[10px] font-normal text-muted-foreground mt-1 flex items-center gap-2">
-                      <MapPin className="h-3 w-3" /> {order.shipping_details?.city}
-                    </p>
+                  <div className="p-5 bg-muted/30 rounded-2xl border border-primary/5 space-y-2">
+                    <div>
+                      <p className="text-sm font-bold text-primary">{order.shipping_details?.name}</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap mt-1">
+                        {order.shipping_details?.address}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-1.5 mt-1">
+                        <MapPin className="h-3 w-3" /> {order.shipping_details?.city} - {order.shipping_details?.zip}
+                      </p>
+                    </div>
+                    
+                    <div className="pt-3 flex flex-col gap-1.5 border-t border-primary/5 mt-2">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-primary/70">
+                        <Mail className="h-3 w-3" /> {order.shipping_details?.email}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-primary/70">
+                        <Phone className="h-3 w-3" /> {order.shipping_details?.phone}
+                      </div>
+                    </div>
                   </div>
                </div>
 

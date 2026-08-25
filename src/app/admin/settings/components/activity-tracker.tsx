@@ -85,7 +85,12 @@ export function ActivityTracker() {
                     <TableCell className="text-xs text-muted-foreground">
                       {order.created_at ? format(order.created_at.toDate(), 'MMM d, p') : '...'}
                     </TableCell>
-                    <TableCell className="text-xs font-medium">{order.shipping_details?.name || 'Customer'}</TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-primary">{order.shipping_details?.name || 'Customer'}</span>
+                        <span className="text-[9px] text-muted-foreground uppercase">{order.shipping_details?.city}, {order.shipping_details?.zip}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="font-bold">INR {order.amount_paise / 100}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-widest rounded-full">
