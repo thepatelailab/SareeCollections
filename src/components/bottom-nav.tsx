@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Home, Search, Heart, User, Menu, Sparkles } from 'lucide-react';
+import { Home, Search, Heart, User, Menu, Sparkles, Package } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -27,7 +27,7 @@ export function BottomNav() {
 
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
-    { icon: Search, label: 'Search', href: '#' },
+    { icon: Package, label: 'Orders', href: '/my-account/orders' },
     { icon: Heart, label: 'Wishlist', href: '#' },
     { icon: User, label: 'Profile', href: '/login' },
   ];
@@ -94,6 +94,7 @@ export function BottomNav() {
             
             <Link href="/lehenga" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5">Lehenga</Link>
             <Link href="/about" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5">About Us</Link>
+            <Link href="/my-account/orders" className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5">Order Tracking</Link>
           </div>
         </SheetContent>
       </Sheet>
