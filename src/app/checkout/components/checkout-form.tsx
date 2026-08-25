@@ -166,14 +166,14 @@ export function CheckoutForm() {
         handler: async function () {
           if (firestore) {
              const orderRef = doc(firestore, 'orders', order.id);
-             // CRITICAL FIX: Explicitly map 'image' to ensure thumbnails appear in Order History
+             // Capture the best available image for the order history thumbnail
              await updateDoc(orderRef, {
                 items: cartItems.map(i => ({
                   id: i.id,
                   name: i.name,
                   ownerId: i.ownerId || 'admin',
                   price: i.price,
-                  image: i.thumbnailImg || i.sareeImg,
+                  image: i.thumbnailModelImg || i.modelImg || i.thumbnailImg || i.sareeImg,
                   quantity: i.quantity || 1
                 })),
                 shipping_details: formData,

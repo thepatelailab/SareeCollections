@@ -119,12 +119,19 @@ export default function MyOrdersPage() {
                   </h4>
                   <div className="grid gap-4">
                     {order.items?.map((item, idx) => {
-                      // Normalize item for legacy string-only items or incomplete objects
                       const isLegacy = typeof item === 'string';
                       const name = isLegacy ? item : (item.name || 'Unknown Product');
                       const price = isLegacy ? 0 : (item.price || 0);
-                      // Fallback check for multiple image field names
-                      const image = isLegacy ? null : (item.image || (item as any).thumbnailImg || (item as any).sareeImg);
+                      
+                      // Comprehensive fallback chain for the image URL
+                      const image = isLegacy ? null : (
+                        item.image || 
+                        (item as any).thumbnailModelImg || 
+                        (item as any).modelImg || 
+                        (item as any).thumbnailImg || 
+                        (item as any).sareeImg
+                      );
+                      
                       const quantity = isLegacy ? 1 : (item.quantity || 1);
 
                       return (
@@ -137,7 +144,7 @@ export default function MyOrdersPage() {
                                   alt={name} 
                                   fill 
                                   className="object-cover"
-                                  unoptimized={image.startsWith('data:')}
+                                  unoptimized={typeof image === 'string' && image.startsWith('data:')}
                                 />
                               ) : (
                                 <div className="h-full w-full flex items-center justify-center">
