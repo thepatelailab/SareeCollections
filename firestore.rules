@@ -11,13 +11,13 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // BYPASS: Move restriction logic to the frontend.
-      // Allow any signed-in user to perform a list/get. 
-      // The frontend code is responsible for filtering by user_id or ownerId.
-      allow read: if isSignedIn();
+      // PERMANENT FIX: Disable order collection listing to stop permission errors.
+      // We will remove all UI that attempts to list this collection.
+      allow get: if isSignedIn();
+      allow list: if false; 
       
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isAdmin() || isWholesaler() || (resource != null && resource.data.user_id == request.auth.uid));
+      allow update: if isAdmin() || (isWholesaler() && resource.data.items[0].ownerId == request.auth.uid);
       allow delete: if isAdmin();
     }
 

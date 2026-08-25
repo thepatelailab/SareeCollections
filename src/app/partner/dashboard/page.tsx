@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirebase, useStorage } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { PartnerInventory } from './components/partner-inventory';
-import { PartnerOrders } from './components/partner-orders';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, Package, LogOut, Copy, CheckCircle2, Settings, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Store, LogOut, Copy, CheckCircle2, Settings, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -138,12 +137,9 @@ export default function PartnerDashboardPage() {
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
           <TabsTrigger value="inventory" className="flex items-center gap-2 rounded-xl font-headline text-lg">
             <Store className="h-5 w-5" /> Boutique
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="flex items-center gap-2 rounded-xl font-headline text-lg">
-            <Package className="h-5 w-5" /> Active Orders
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2 rounded-xl font-headline text-lg">
             <Settings className="h-5 w-5" /> Settings
@@ -152,10 +148,6 @@ export default function PartnerDashboardPage() {
 
         <TabsContent value="inventory">
           <PartnerInventory />
-        </TabsContent>
-
-        <TabsContent value="orders">
-          <PartnerOrders />
         </TabsContent>
 
         <TabsContent value="settings">
