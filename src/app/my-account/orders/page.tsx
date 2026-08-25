@@ -61,12 +61,19 @@ export default function MyOrdersPage() {
   });
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'paid': return { color: 'bg-green-100 text-green-700 border-green-200', icon: <CheckCircle2 className="h-4 w-4" /> };
-      case 'ready for packaging': return { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <Package className="h-4 w-4" /> };
-      case 'shipped': return { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: <Truck className="h-4 w-4" /> };
-      case 'delivered': return { color: 'bg-primary text-white border-none', icon: <CheckCircle2 className="h-4 w-4" /> };
-      default: return { color: 'bg-muted text-muted-foreground border-none', icon: <Clock className="h-4 w-4" /> };
+    const s = status.toLowerCase();
+    switch (s) {
+      case 'paid': 
+      case 'pending': 
+        return { color: 'bg-green-100 text-green-700 border-green-200', icon: <CheckCircle2 className="h-4 w-4" />, stepIndex: 0 };
+      case 'ready for packaging': 
+        return { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <Package className="h-4 w-4" />, stepIndex: 1 };
+      case 'shipped': 
+        return { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: <Truck className="h-4 w-4" />, stepIndex: 2 };
+      case 'delivered': 
+        return { color: 'bg-primary text-white border-none', icon: <CheckCircle2 className="h-4 w-4" />, stepIndex: 3 };
+      default: 
+        return { color: 'bg-muted text-muted-foreground border-none', icon: <Clock className="h-4 w-4" />, stepIndex: 0 };
     }
   };
 
@@ -84,8 +91,8 @@ export default function MyOrdersPage() {
 
       <div className="grid gap-12">
         {sortedOrders.map((order) => {
-          const statusConfig = getStatusConfig(order.status);
-          const currentStepIndex = STEPS.indexOf(order.status);
+          const config = getStatusConfig(order.status);
+          const currentStepIndex = config.stepIndex;
           
           return (
             <Card key={order.id} className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white transition-all hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)]">
@@ -97,9 +104,9 @@ export default function MyOrdersPage() {
                 </div>
                 <div className="flex flex-col md:items-end gap-3">
                   <div className="flex items-center gap-3">
-                    <Badge className={cn("rounded-full px-6 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg", statusConfig.color)}>
+                    <Badge className={cn("rounded-full px-6 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg", config.color)}>
                       <span className="flex items-center gap-2">
-                        {statusConfig.icon}
+                        {config.icon}
                         {order.status}
                       </span>
                     </Badge>
@@ -124,7 +131,7 @@ export default function MyOrdersPage() {
                       const price = isLegacy ? 0 : (item.price || 0);
                       
                       // Comprehensive fallback chain for the image URL
-                      const image = isLegacy ? null : (
+                      const rawImage = isLegacy ? null : (
                         item.image || 
                         (item as any).thumbnailModelImg || 
                         (item as any).modelImg || 
@@ -133,18 +140,19 @@ export default function MyOrdersPage() {
                       );
                       
                       const quantity = isLegacy ? 1 : (item.quantity || 1);
+                      const isDataUri = typeof rawImage === 'string' && rawImage.startsWith('data:');
 
                       return (
                         <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-[#F9F9F4] rounded-3xl border border-primary/5 group hover:bg-[#F3F4ED] transition-colors">
                           <div className="flex items-center gap-6">
                             <div className="h-20 w-16 relative rounded-2xl overflow-hidden shadow-md border border-white shrink-0 bg-muted">
-                              {image ? (
+                              {rawImage ? (
                                 <Image 
-                                  src={image} 
+                                  src={rawImage} 
                                   alt={name} 
                                   fill 
                                   className="object-cover"
-                                  unoptimized={typeof image === 'string' && image.startsWith('data:')}
+                                  unoptimized={isDataUri}
                                 />
                               ) : (
                                 <div className="h-full w-full flex items-center justify-center">
@@ -173,7 +181,7 @@ export default function MyOrdersPage() {
                   <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="absolute left-0 top-0 h-full bg-accent transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(255,225,77,0.5)]" 
-                      style={{ width: `${Math.max(0, ((currentStepIndex + 1) / STEPS.length) * 100)}%` }}
+                      style={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
                     />
                   </div>
                   <div className="flex justify-between mt-6">
@@ -188,11 +196,15 @@ export default function MyOrdersPage() {
                             isCompleted ? "bg-accent scale-110 shadow-xl" : "bg-muted scale-90",
                             isCurrent && "ring-4 ring-accent/20"
                           )}>
-                            {isCompleted ? <CheckCircle2 className="h-5 w-5 text-accent-foreground" /> : <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />}
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
+                            ) : (
+                              <div className="h-2 w-2 rounded-full bg-muted-foreground/60" />
+                            )}
                           </div>
                           <span className={cn(
                             "text-[9px] font-black uppercase tracking-widest text-center px-1 leading-tight",
-                            isCompleted ? "text-primary" : "text-muted-foreground opacity-30"
+                            isCompleted ? "text-primary opacity-100" : "text-muted-foreground opacity-40"
                           )}>{step}</span>
                         </div>
                       )

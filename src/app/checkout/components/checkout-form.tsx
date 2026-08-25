@@ -168,6 +168,7 @@ export function CheckoutForm() {
              const orderRef = doc(firestore, 'orders', order.id);
              // Capture the best available image for the order history thumbnail
              await updateDoc(orderRef, {
+                status: 'paid', // Update status to paid immediately for better UX
                 items: cartItems.map(i => ({
                   id: i.id,
                   name: i.name,
