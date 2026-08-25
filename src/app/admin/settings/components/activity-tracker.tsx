@@ -1,12 +1,12 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
 import { Order } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, ShoppingBag, IndianRupee, Globe } from 'lucide-react';
+import { Loader2, ShoppingBag, IndianRupee, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppContext } from '@/components/providers/app-provider';
 
@@ -14,17 +14,24 @@ export function ActivityTracker() {
   const { isAdmin, isRoleLoaded } = useAppContext();
   const firestore = useFirestore();
 
-  // Guard the query: only run if the user is confirmed as admin
+  // Simplified query: removed orderBy to prevent index errors
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null;
-    return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(50));
-  }, [firestore, isAdmin]);
+    if (!firestore || !isAdmin || !isRoleLoaded) return null;
+    return query(collection(firestore, 'orders'), limit(100));
+  }, [firestore, isAdmin, isRoleLoaded]);
 
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery as any);
 
   if (!isRoleLoaded || isLoading) {
     return <div className="p-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
   }
+
+  // Sort manually in JS
+  const sortedOrders = orders ? [...orders].sort((a, b) => {
+    const dateA = a.created_at?.toDate?.()?.getTime() || 0;
+    const dateB = b.created_at?.toDate?.()?.getTime() || 0;
+    return dateB - dateA;
+  }) : [];
 
   const totalRevenue = orders?.reduce((acc, o) => acc + (o.amount_paise / 100), 0) || 0;
   const pendingOrders = orders?.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length || 0;
@@ -44,7 +51,7 @@ export function ActivityTracker() {
             <CardDescription className="text-accent-foreground/60 text-[10px] font-black uppercase tracking-widest">Active Fulfillments</CardDescription>
             <CardTitle className="text-3xl font-black flex items-center gap-2"><ShoppingBag className="h-6 w-6" /> {pendingOrders}</CardTitle>
           </CardHeader>
-        </Card>
+        </div>
         <Card className="rounded-[2rem] border-none shadow-lg bg-white border border-primary/5">
           <CardHeader className="pb-2">
             <CardDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Global Reach</CardDescription>
@@ -72,7 +79,7 @@ export function ActivityTracker() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders?.map((order) => (
+                {sortedOrders.map((order) => (
                   <TableRow key={order.id} className="border-primary/5 hover:bg-muted/20 transition-colors">
                     <TableCell className="font-bold text-primary py-4">#{order.id.slice(-6).toUpperCase()}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">

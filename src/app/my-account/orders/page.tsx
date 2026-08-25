@@ -1,28 +1,27 @@
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Order } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, ChevronRight, Shirt } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, Shirt } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function MyOrdersPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Strictly filtered query for the current user
+  // Simplified query: removed orderBy to prevent index-related permission errors
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    // We order by created_at to see newest first
     return query(
       collection(firestore, 'orders'), 
-      where('user_id', '==', user.uid),
-      orderBy('created_at', 'desc')
+      where('user_id', '==', user.uid)
     );
   }, [firestore, user?.uid]);
 
@@ -73,6 +72,13 @@ export default function MyOrdersPage() {
     }
   };
 
+  // Sort manually in JS to avoid index requirements
+  const sortedOrders = [...orders].sort((a, b) => {
+    const dateA = a.created_at?.toDate?.()?.getTime() || 0;
+    const dateB = b.created_at?.toDate?.()?.getTime() || 0;
+    return dateB - dateA;
+  });
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl space-y-10">
       <div>
@@ -81,7 +87,7 @@ export default function MyOrdersPage() {
       </div>
 
       <div className="grid gap-8">
-        {orders.map((order) => (
+        {sortedOrders.map((order) => (
           <Card key={order.id} className="rounded-[2.5rem] border-none shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm transition-all hover:shadow-2xl">
             <div className="bg-primary p-6 md:p-8 text-primary-foreground flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -135,7 +141,8 @@ export default function MyOrdersPage() {
                 ></div>
                 <div className="relative flex justify-between">
                   {['paid', 'ready for packaging', 'shipped', 'delivered'].map((step, idx) => {
-                    const isCompleted = order.status === 'delivered' || (idx <= ['paid', 'ready for packaging', 'shipped', 'delivered'].indexOf(order.status));
+                    const statusIndex = ['paid', 'ready for packaging', 'shipped', 'delivered'].indexOf(order.status);
+                    const isCompleted = idx <= statusIndex;
                     return (
                       <div key={step} className="flex flex-col items-center gap-2 z-10">
                         <div className={cn(
