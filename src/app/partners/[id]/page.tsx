@@ -2,14 +2,12 @@
 'use client';
 
 import { useMemoFirebase, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, getDocs, limit, doc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { ProductGrid } from '@/components/product-grid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Store, MapPin, Share2, Award, Star, Heart } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Award, Star, Heart, Share2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Product, UserProfile } from '@/lib/types';
@@ -53,17 +51,18 @@ export default function PartnerBoutiquePage() {
     );
   }
 
+  const boutiqueName = partnerProfile?.businessName || `Heritage Boutique ${id.slice(-4)}`;
   const totalLikes = products?.reduce((acc, p) => acc + (p.likes || 0), 0) || 0;
   const totalShares = products?.reduce((acc, p) => acc + (p.shares || 0), 0) || 0;
   const heritageScore = totalLikes + totalShares;
-  
-  const boutiqueName = partnerProfile?.businessName || `Boutique ${id.slice(-4)}`;
 
   return (
     <div className="min-h-screen bg-[#F3F4ED]">
+      <title>{`${boutiqueName} | SareeDukan Heritage Partner`}</title>
+      <meta name="description" content={`Explore authentic handcrafted textiles from ${boutiqueName}. Discover unique heritage weaves and artisan crafts.`} />
+      
       {/* Heritage Header */}
       <div className="relative bg-primary text-primary-foreground py-16 md:py-24 overflow-hidden">
-        {/* Dynamic Banner Background */}
         {partnerProfile?.bannerUrl && (
           <div className="absolute inset-0 z-0">
             <Image 
@@ -96,7 +95,6 @@ export default function PartnerBoutiquePage() {
               <p className="text-3xl font-black text-accent">{products?.length || 0}</p>
               <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">Collections</p>
             </div>
-            
             <div className="bg-white/5 rounded-2xl px-6 py-4 border border-white/10 text-center min-w-[120px]">
               <div className="flex items-center justify-center gap-1.5 mb-0.5">
                 <Heart className="h-4 w-4 fill-accent text-accent" />
@@ -104,7 +102,6 @@ export default function PartnerBoutiquePage() {
               </div>
               <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">Total Appreciations</p>
             </div>
-
             <div className="bg-white/5 rounded-2xl px-6 py-4 border border-white/10 text-center min-w-[120px]">
               <div className="flex items-center justify-center gap-1.5 mb-0.5">
                 <Share2 className="h-4 w-4 text-accent" />

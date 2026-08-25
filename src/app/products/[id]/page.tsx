@@ -1,12 +1,13 @@
+
 'use client';
 
-import { useDoc } from '@/firebase';
-import { useMemoFirebase } from '@/firebase';
+import { useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { ProductDetails } from '@/components/product-details';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
+import Head from 'next/head';
 
 export default function ProductPage() {
   const params = useParams();
@@ -46,5 +47,35 @@ export default function ProductPage() {
     );
   }
 
-  return <ProductDetails product={product} />;
+  // Structured Data (JSON-LD) for SEO
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.modelImg || product.sareeImg,
+    "description": product.description,
+    "brand": {
+      "@type": "Brand",
+      "name": "SareeDukan"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": typeof window !== 'undefined' ? window.location.href : '',
+      "priceCurrency": "INR",
+      "price": product.price,
+      "availability": (product.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+    }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <title>{`${product.name} | SareeDukan Heritage Collection`}</title>
+      <meta name="description" content={product.description.slice(0, 160)} />
+      <ProductDetails product={product} />
+    </>
+  );
 }
