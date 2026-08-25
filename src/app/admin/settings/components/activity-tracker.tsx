@@ -14,7 +14,8 @@ export function ActivityTracker() {
   const { isAdmin, isLoading: isAppLoading } = useAppContext();
 
   const ordersQuery = useMemoFirebase(() => {
-    // CRITICAL: Only run the global query if the user is explicitly an admin and the app is ready
+    // CRITICAL: Prevent early execution. Only query if the user is verified as an Admin.
+    // If we query while isAdmin is false, Firestore Rules will reject it because there is no user_id filter.
     if (!firestore || !isAdmin || isAppLoading) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(15));
   }, [firestore, isAdmin, isAppLoading]);

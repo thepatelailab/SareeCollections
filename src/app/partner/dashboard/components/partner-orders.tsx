@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -13,20 +12,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { useAppContext } from '@/components/providers/app-provider';
 
 const COURIERS = ['BlueDart', 'Delhivery', 'DTDC', 'India Post', 'DHL', 'Shiprocket'];
 
 export function PartnerOrders() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { isWholesaler, isLoading: isAppLoading } = useAppContext();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [shippingInfo, setShippingInfo] = useState<Record<string, { courier: string, tracking: string }>>({});
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    // CRITICAL: Prevent early execution. Only query if the user is verified as a Wholesaler.
+    if (!firestore || !user?.uid || !isWholesaler || isAppLoading) return null;
     return query(collection(firestore, 'orders'), where('status', 'in', ['paid', 'shipped']));
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isWholesaler, isAppLoading]);
 
   const { data: allOrders, isLoading } = useCollection<Order>(ordersQuery as any);
 
@@ -59,7 +61,7 @@ export function PartnerOrders() {
     }
   };
 
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (isAppLoading || isLoading) return <Skeleton className="h-64 w-full" />;
 
   if (myOrders.length === 0) {
     return (
