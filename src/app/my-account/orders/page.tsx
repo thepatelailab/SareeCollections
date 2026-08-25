@@ -75,7 +75,7 @@ export default function MyOrdersPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="inline-flex items-center gap-2 bg-primary/5 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-3">
-            <LayoutGrid className="h-3 w-3" /> Acquisition History
+            <LayoutGrid className="h-3.5 w-3.5" /> Acquisition History
           </div>
           <h1 className="text-4xl md:text-6xl font-headline text-primary lowercase leading-tight">my orders</h1>
           <p className="text-muted-foreground font-medium italic mt-2">Tracking your heritage pieces across the globe.</p>
@@ -118,28 +118,39 @@ export default function MyOrdersPage() {
                     <Shirt className="h-4 w-4" /> Reserved Pieces
                   </h4>
                   <div className="grid gap-4">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-[#F9F9F4] rounded-3xl border border-primary/5 group hover:bg-[#F3F4ED] transition-colors">
-                        <div className="flex items-center gap-6">
-                          <div className="h-20 w-16 relative rounded-2xl overflow-hidden shadow-md border border-white">
-                            {item.image ? (
-                              <Image src={item.image} alt={item.name} fill className="object-cover" />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center bg-muted">
-                                <Package className="h-6 w-6 text-muted-foreground/30" />
-                              </div>
-                            )}
+                    {order.items?.map((item, idx) => {
+                      // Normalize item for legacy string-only items
+                      const isLegacy = typeof item === 'string';
+                      const name = isLegacy ? item : (item.name || 'Unknown Product');
+                      const price = isLegacy ? 0 : (item.price || 0);
+                      const image = isLegacy ? null : item.image;
+                      const quantity = isLegacy ? 1 : (item.quantity || 1);
+
+                      return (
+                        <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-[#F9F9F4] rounded-3xl border border-primary/5 group hover:bg-[#F3F4ED] transition-colors">
+                          <div className="flex items-center gap-6">
+                            <div className="h-20 w-16 relative rounded-2xl overflow-hidden shadow-md border border-white shrink-0">
+                              {image ? (
+                                <Image src={image} alt={name} fill className="object-cover" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center bg-muted">
+                                  <Package className="h-6 w-6 text-muted-foreground/30" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-headline text-xl text-primary leading-none mb-2">{name}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Quantity: {quantity}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-headline text-xl text-primary leading-none mb-2">{item.name}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Quantity: {item.quantity}</p>
+                          <div className="mt-4 sm:mt-0 text-right w-full sm:w-auto">
+                            <p className="text-xl font-black text-primary">
+                              {price > 0 ? `INR ${price.toLocaleString()}` : 'Price N/A'}
+                            </p>
                           </div>
                         </div>
-                        <div className="mt-4 sm:mt-0 text-right w-full sm:w-auto">
-                          <p className="text-xl font-black text-primary">INR {item.price.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -148,7 +159,7 @@ export default function MyOrdersPage() {
                   <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="absolute left-0 top-0 h-full bg-accent transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(255,225,77,0.5)]" 
-                      style={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
+                      style={{ width: `${Math.max(0, ((currentStepIndex + 1) / STEPS.length) * 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between mt-6">
@@ -182,10 +193,10 @@ export default function MyOrdersPage() {
                       <MapPin className="h-4 w-4" /> Delivery Address
                     </h4>
                     <div className="p-6 bg-muted/20 rounded-3xl border border-primary/5">
-                      <p className="font-bold text-primary text-lg mb-1">{order.shipping_details?.name}</p>
+                      <p className="font-bold text-primary text-lg mb-1">{order.shipping_details?.name || 'Customer'}</p>
                       <p className="text-sm text-muted-foreground leading-relaxed italic">
-                        {order.shipping_details?.address}<br/>
-                        {order.shipping_details?.city}, {order.shipping_details?.zip}
+                        {order.shipping_details?.address || 'Address not provided'}<br/>
+                        {order.shipping_details?.city || ''}, {order.shipping_details?.zip || ''}
                       </p>
                     </div>
                   </div>
