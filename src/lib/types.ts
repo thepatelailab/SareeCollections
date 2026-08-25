@@ -47,6 +47,7 @@ export interface OrderItem {
   ownerId: string;
   price: number;
   quantity: number;
+  image?: string;
 }
 
 export interface Order {
@@ -55,7 +56,7 @@ export interface Order {
   user_id: string;
   email: string;
   amount_paise: number;
-  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'paid' | 'ready for packaging' | 'shipped' | 'delivered' | 'cancelled';
   items: OrderItem[];
   shipping_details?: ShippingDetails;
   created_at: any;

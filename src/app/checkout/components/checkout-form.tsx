@@ -172,6 +172,7 @@ export function CheckoutForm() {
                   name: i.name,
                   ownerId: i.ownerId,
                   price: i.price,
+                  image: i.thumbnailImg || i.sareeImg,
                   quantity: i.quantity || 1
                 })),
                 shipping_details: formData,
