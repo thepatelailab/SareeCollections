@@ -51,7 +51,7 @@ export function ActivityTracker() {
             <CardDescription className="text-accent-foreground/60 text-[10px] font-black uppercase tracking-widest">Active Fulfillments</CardDescription>
             <CardTitle className="text-3xl font-black flex items-center gap-2"><ShoppingBag className="h-6 w-6" /> {pendingOrders}</CardTitle>
           </CardHeader>
-        </div>
+        </Card>
         <Card className="rounded-[2rem] border-none shadow-lg bg-white border border-primary/5">
           <CardHeader className="pb-2">
             <CardDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Global Reach</CardDescription>
