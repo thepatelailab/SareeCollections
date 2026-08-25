@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HeroSettings } from './components/hero-settings';
 import { LocationDiscovery } from './components/location-discovery';
 import { EmailSettings } from './components/email-settings';
-import { ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, MapPin } from 'lucide-react';
+import { ActivityTracker } from './components/activity-tracker';
+import { ImageIcon, Sparkles, Settings, Handshake, Check, X, Mail, MapPin, BarChart3 } from 'lucide-react';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { WholesalerRequest } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -77,8 +78,11 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="appearance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[700px] bg-muted/40 p-1 rounded-2xl h-14 border">
+      <Tabs defaultValue="activity" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[850px] bg-muted/40 p-1 rounded-2xl h-14 border">
+          <TabsTrigger value="activity" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
+            <BarChart3 className="h-4 w-4" /> Activity
+          </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white">
             <ImageIcon className="h-4 w-4" /> Style
           </TabsTrigger>
@@ -92,6 +96,10 @@ export default function AdminSettingsPage() {
             <Mail className="h-4 w-4" /> Emails
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="activity">
+          <ActivityTracker />
+        </TabsContent>
 
         <TabsContent value="appearance">
           <HeroSettings />

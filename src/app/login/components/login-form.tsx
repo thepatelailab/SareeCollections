@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   linkWithCredential,
   EmailAuthProvider,
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings, LayoutDashboard, User as UserIcon } from 'lucide-react';
 import { useAppContext } from '@/components/providers/app-provider';
 
 const ADMIN_EMAIL = 'bp.brpl@gmail.com';
@@ -35,13 +36,48 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { refetchUserProfile } = useAppContext();
+  const { refetchUserProfile, isAdmin, isWholesaler } = useAppContext();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectUrl = searchParams.get('redirect') || '/';
+
+  // If already logged in, show a dashboard redirect UI
+  if (currentUser && !currentUser.isAnonymous) {
+    return (
+      <Card className="w-full max-w-sm border-none shadow-xl rounded-3xl">
+        <CardHeader className="text-center">
+          <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit mb-4">
+            <UserIcon className="h-8 w-8 text-primary" />
+          </div>
+          <CardTitle className="font-headline text-2xl text-primary">Account Active</CardTitle>
+          <CardDescription>Logged in as {currentUser.email}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isAdmin && (
+            <Button asChild className="w-full h-12 rounded-xl bg-primary">
+              <Link href="/admin/settings"><Settings className="mr-2 h-4 w-4" /> Admin Settings</Link>
+            </Button>
+          )}
+          {isWholesaler && (
+            <Button asChild className="w-full h-12 rounded-xl bg-accent text-accent-foreground">
+              <Link href="/partner/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" /> Partner Dashboard</Link>
+            </Button>
+          )}
+          <Button asChild variant="outline" className="w-full h-12 rounded-xl">
+            <Link href="/my-account/orders">View My Orders</Link>
+          </Button>
+        </CardContent>
+        <CardFooter>
+          <Button variant="ghost" className="w-full" onClick={() => auth?.signOut()}>
+            Sign Out
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   const syncUserProfile = async (user: User) => {
     if (!firestore) return;
@@ -53,10 +89,8 @@ export function LoginForm() {
         const role = user.email === ADMIN_EMAIL ? 'admin' : 'customer';
         await setDoc(userRef, { role }, { merge: true });
       }
-      // Ensure the context is updated
       await refetchUserProfile();
     } catch (e) {
-      // Log non-fatal error to console for debugging, but don't block the user
       console.warn("Profile sync delay:", e);
     }
   };
@@ -82,18 +116,13 @@ export function LoginForm() {
         finalUser = userCredential.user;
       }
 
-      // We have the finalUser, so sign-in is successful.
       toast({
         title: action === 'signup' ? 'Account Created!' : 'Login Successful!',
         description: "Welcome back to SareeDukan.",
       });
 
-      // Handle profile sync asynchronously to avoid permission lag blocking the UI
       syncUserProfile(finalUser);
-
-      // Navigate to the target page or homepage immediately
       router.push(redirectUrl);
-      router.refresh();
     } catch (error: any) {
       toast({
         variant: 'destructive',

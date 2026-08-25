@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Home, Search, Heart, User, Menu, Sparkles, Package } from 'lucide-react';
+import { Home, Heart, User, Menu, Sparkles, Package, Settings, LayoutDashboard } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -22,7 +22,7 @@ import { useUser } from '@/firebase';
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { sareeVarieties } = useAppContext();
+  const { sareeVarieties, isAdmin, isWholesaler } = useAppContext();
   const { user } = useUser();
 
   const navItems = [
@@ -65,7 +65,18 @@ export function BottomNav() {
               <Logo />
             </SheetTitle>
           </SheetHeader>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            {isAdmin && (
+              <Link href="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl bg-primary text-white font-headline text-lg mb-2">
+                <Settings className="h-5 w-5" /> Admin Panel
+              </Link>
+            )}
+            {isWholesaler && (
+              <Link href="/partner/dashboard" className="flex items-center gap-3 p-4 rounded-2xl bg-accent text-accent-foreground font-headline text-lg mb-2">
+                <LayoutDashboard className="h-5 w-5" /> Partner Dashboard
+              </Link>
+            )}
+
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="saree" className="border-none">
                 <AccordionTrigger className="text-xl font-headline tracking-widest text-primary py-4 uppercase border-b border-primary/5 hover:no-underline">
