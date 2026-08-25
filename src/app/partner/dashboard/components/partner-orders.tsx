@@ -16,7 +16,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Package, Truck, Loader2, CheckCircle2, User, MapPin, Mail, Phone } from 'lucide-react';
+import { Package, Truck, Loader2, CheckCircle2, User, MapPin, Mail, Phone, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/components/providers/app-provider';
@@ -29,7 +29,6 @@ export function PartnerOrders() {
   
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Guard the query: only run if the user is confirmed as a wholesaler or admin
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || (!isWholesaler && !isAdmin)) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'));
@@ -37,10 +36,120 @@ export function PartnerOrders() {
 
   const { data: allOrders, isLoading } = useCollection<Order>(ordersQuery as any);
 
-  // Filter orders on the frontend to show only those containing this user's items
   const myOrders = allOrders?.filter(order => 
     order.items && Array.isArray(order.items) && order.items.some(item => item.ownerId === user?.uid)
   ) || [];
+
+  const handlePrintInvoice = (order: Order) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const itemsHtml = order.items.map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">
+          <div style="font-weight: bold; color: #40000A;">${item.name}</div>
+          <div style="font-size: 10px; color: #666;">ID: ${item.id}</div>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">INR ${item.price?.toLocaleString()}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">INR ${(item.price * item.quantity).toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${order.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=PT+Sans&display=swap');
+            body { font-family: 'PT Sans', sans-serif; padding: 50px; color: #333; line-height: 1.6; }
+            .invoice-box { max-width: 800px; margin: auto; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; border-bottom: 4px solid #40000A; padding-bottom: 20px; }
+            .logo { font-family: 'Playfair Display', serif; font-size: 32px; color: #40000A; text-transform: lowercase; }
+            .title { font-family: 'Playfair Display', serif; font-size: 24px; color: #40000A; }
+            .grid { display: grid; grid-cols: 2; gap: 40px; margin-bottom: 40px; }
+            .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #999; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { text-align: left; background: #F9F9F4; padding: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+            .total-section { margin-top: 40px; text-align: right; border-top: 2px solid #40000A; padding-top: 20px; }
+            .total-row { font-size: 24px; font-weight: bold; color: #40000A; }
+            .footer { margin-top: 100px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-box">
+            <div class="header">
+              <div>
+                <div class="logo">SareeDukan.Com</div>
+                <p style="font-size: 12px; color: #666; margin-top: 5px;">Authentic Heritage Marketplace</p>
+              </div>
+              <div style="text-align: right;">
+                <div class="title">Official Invoice</div>
+                <p style="font-size: 12px;">Ref: <strong>#${order.id.slice(-8).toUpperCase()}</strong></p>
+                <p style="font-size: 12px;">Date: ${format(new Date(), 'MMMM do, yyyy')}</p>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+              <div style="width: 45%;">
+                <div class="section-title">Shipping Details</div>
+                <div style="font-size: 14px;">
+                  <strong>${order.shipping_details?.name}</strong><br>
+                  ${order.shipping_details?.address}<br>
+                  ${order.shipping_details?.city} - ${order.shipping_details?.zip}<br>
+                  <span style="color: #666;">Phone: ${order.shipping_details?.phone}</span><br>
+                  <span style="color: #666;">Email: ${order.shipping_details?.email}</span>
+                </div>
+              </div>
+              <div style="width: 45%; text-align: right;">
+                <div class="section-title">Payment Information</div>
+                <div style="font-size: 14px;">
+                  Status: <strong style="color: #22c55e; text-transform: uppercase;">${order.status}</strong><br>
+                  Method: Razorpay Secure<br>
+                  Currency: INR
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Product Description</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Unit Price</th>
+                  <th style="text-align: right;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+
+            <div class="total-section">
+              <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Grand Total</div>
+              <div class="total-row">INR ${(order.amount_paise / 100).toLocaleString()}</div>
+            </div>
+
+            <div class="footer">
+              <p>Thank you for supporting traditional artisans and heritage looms.</p>
+              <p>This is a computer-generated document. No signature required.</p>
+              <p style="margin-top: 10px;">&copy; ${new Date().getFullYear()} SareeDukan.Com</p>
+            </div>
+          </div>
+          <script>
+            window.onload = function() { 
+              setTimeout(() => {
+                window.print(); 
+                window.onafterprint = function() { window.close(); };
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
     if (!firestore) return;
@@ -103,9 +212,19 @@ export function PartnerOrders() {
                <h3 className="font-headline text-xl text-primary lowercase">order #{order.id.slice(-8)}</h3>
                <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{order.created_at ? format(order.created_at.toDate(), 'PPP p') : 'Pending...'}</p>
              </div>
-             <Badge className="bg-accent text-accent-foreground border-none font-black text-[10px] uppercase tracking-widest px-4 py-1.5">
-               {order.status}
-             </Badge>
+             <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 rounded-xl bg-white border-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                  onClick={() => handlePrintInvoice(order)}
+                >
+                  <Printer className="h-3.5 w-3.5 mr-2" /> Print Invoice
+                </Button>
+                <Badge className="bg-accent text-accent-foreground border-none font-black text-[10px] uppercase tracking-widest px-4 py-1.5 shadow-sm">
+                  {order.status}
+                </Badge>
+             </div>
           </div>
 
           <CardContent className="p-8 grid md:grid-cols-2 gap-10">

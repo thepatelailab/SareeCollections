@@ -6,7 +6,7 @@ import { Order } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, Shirt, LayoutGrid } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, ExternalLink, Shirt, LayoutGrid, Printer } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +28,111 @@ export default function MyOrdersPage() {
   }, [firestore, user?.uid]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery as any);
+
+  const handlePrintInvoice = (order: Order) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const itemsHtml = order.items.map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">
+          <div style="font-weight: bold; color: #40000A;">${item.name}</div>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">INR ${item.price?.toLocaleString()}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">INR ${(item.price * item.quantity).toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${order.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=PT+Sans&display=swap');
+            body { font-family: 'PT Sans', sans-serif; padding: 50px; color: #333; line-height: 1.6; }
+            .invoice-box { max-width: 800px; margin: auto; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; border-bottom: 4px solid #40000A; padding-bottom: 20px; }
+            .logo { font-family: 'Playfair Display', serif; font-size: 32px; color: #40000A; text-transform: lowercase; }
+            .title { font-family: 'Playfair Display', serif; font-size: 24px; color: #40000A; }
+            .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #999; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { text-align: left; background: #F9F9F4; padding: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+            .total-section { margin-top: 40px; text-align: right; border-top: 2px solid #40000A; padding-top: 20px; }
+            .total-row { font-size: 24px; font-weight: bold; color: #40000A; }
+            .footer { margin-top: 100px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-box">
+            <div class="header">
+              <div>
+                <div class="logo">SareeDukan.Com</div>
+                <p style="font-size: 12px; color: #666; margin-top: 5px;">Authentic Heritage Marketplace</p>
+              </div>
+              <div style="text-align: right;">
+                <div class="title">Purchase Invoice</div>
+                <p style="font-size: 12px;">Ref: <strong>#${order.id.slice(-8).toUpperCase()}</strong></p>
+                <p style="font-size: 12px;">Date: ${format(new Date(), 'MMMM do, yyyy')}</p>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+              <div style="width: 45%;">
+                <div class="section-title">Shipping To</div>
+                <div style="font-size: 14px;">
+                  <strong>${order.shipping_details?.name}</strong><br>
+                  ${order.shipping_details?.address}<br>
+                  ${order.shipping_details?.city} - ${order.shipping_details?.zip}<br>
+                  <span style="color: #666;">Phone: ${order.shipping_details?.phone}</span>
+                </div>
+              </div>
+              <div style="width: 45%; text-align: right;">
+                <div class="section-title">Order Status</div>
+                <div style="font-size: 14px;">
+                  Status: <strong style="color: #22c55e; text-transform: uppercase;">${order.status}</strong><br>
+                  Transaction: Confirmed via Razorpay
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Heritage Piece</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Unit Price</th>
+                  <th style="text-align: right;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+
+            <div class="total-section">
+              <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Grand Total</div>
+              <div class="total-row">INR ${(order.amount_paise / 100).toLocaleString()}</div>
+            </div>
+
+            <div class="footer">
+              <p>Thank you for acquiring a masterpiece from our curated heritage collections.</p>
+              <p>&copy; ${new Date().getFullYear()} SareeDukan.Com</p>
+            </div>
+          </div>
+          <script>
+            window.onload = function() { 
+              setTimeout(() => {
+                window.print(); 
+                window.onafterprint = function() { window.close(); };
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   if (isUserLoading || isOrdersLoading) {
     return (
@@ -104,6 +209,14 @@ export default function MyOrdersPage() {
                 </div>
                 <div className="flex flex-col md:items-end gap-3">
                   <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-9 rounded-xl bg-white/10 border-white/20 text-white hover:bg-white/20 transition-all text-[10px] font-black uppercase tracking-widest"
+                      onClick={() => handlePrintInvoice(order)}
+                    >
+                      <Printer className="h-3.5 w-3.5 mr-2" /> Print Invoice
+                    </Button>
                     <Badge className={cn("rounded-full px-6 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg", config.color)}>
                       <span className="flex items-center gap-2">
                         {config.icon}
@@ -130,7 +243,6 @@ export default function MyOrdersPage() {
                       const name = isLegacy ? item : (item.name || 'Unknown Product');
                       const price = isLegacy ? 0 : (item.price || 0);
                       
-                      // Comprehensive fallback chain for the image URL
                       const rawImage = isLegacy ? null : (
                         item.image || 
                         (item as any).thumbnailModelImg || 
