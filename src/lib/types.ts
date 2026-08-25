@@ -18,7 +18,7 @@ export interface Product {
   likes?: number;
   shares?: number;
   ownerId?: string;
-  updatedAt?: any; // Added for sync logic in Phase 3
+  updatedAt?: any; 
 }
 
 export interface CartItem extends Product {
@@ -41,6 +41,14 @@ export interface ShippingDetails {
   zip: string;
 }
 
+export interface OrderItem {
+  id: string;
+  name: string;
+  ownerId: string;
+  price: number;
+  quantity: number;
+}
+
 export interface Order {
   id: string;
   order_id: string;
@@ -48,7 +56,7 @@ export interface Order {
   email: string;
   amount_paise: number;
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  items: any[];
+  items: OrderItem[];
   shipping_details?: ShippingDetails;
   created_at: any;
   updated_at: any;
