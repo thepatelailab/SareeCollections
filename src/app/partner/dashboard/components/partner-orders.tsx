@@ -23,23 +23,23 @@ import { useAppContext } from '@/components/providers/app-provider';
 
 export function PartnerOrders() {
   const { user } = useUser();
-  const { isWholesaler, isRoleLoaded } = useAppContext();
+  const { isWholesaler, isAdmin, isRoleLoaded } = useAppContext();
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Guard the query: only run if the user is confirmed as a wholesaler
+  // Guard the query: only run if the user is confirmed as a wholesaler or admin
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !isWholesaler) return null;
+    if (!firestore || (!isWholesaler && !isAdmin)) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'));
-  }, [firestore, isWholesaler]);
+  }, [firestore, isWholesaler, isAdmin]);
 
   const { data: allOrders, isLoading } = useCollection<Order>(ordersQuery as any);
 
-  // Filter orders on the frontend to show only those containing this wholesaler's items
+  // Filter orders on the frontend to show only those containing this user's items
   const myOrders = allOrders?.filter(order => 
-    order.items.some(item => item.ownerId === user?.uid)
+    order.items && Array.isArray(order.items) && order.items.some(item => item.ownerId === user?.uid)
   ) || [];
 
   const handleUpdateStatus = async (orderId: string, status: string) => {

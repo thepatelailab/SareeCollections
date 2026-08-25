@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2 } from 'lucide-react';
+import { Trash2, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ export function PartnerInventory() {
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [stockInputs, setStockInputs] = useState<Record<string, string>>({});
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
 
   const myProductsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -56,6 +57,27 @@ export function PartnerInventory() {
       await updateDoc(docRef, { stock: newStock });
       toast({ title: 'Inventory Updated', description: 'Stock levels have been synced.' });
       setStockInputs(prev => ({ ...prev, [productId]: '' }));
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Update Failed' });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleUpdatePrice = async (productId: string) => {
+    if (!firestore) return;
+    const newPrice = parseFloat(priceInputs[productId]);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast({ variant: 'destructive', title: 'Invalid Price', description: 'Please enter a valid price.' });
+      return;
+    }
+
+    setUpdatingId(productId);
+    try {
+      const docRef = doc(firestore, 'SareeCollection', productId);
+      await updateDoc(docRef, { price: newPrice });
+      toast({ title: 'Price Updated', description: 'New retail price is now live.' });
+      setPriceInputs(prev => ({ ...prev, [productId]: '' }));
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update Failed' });
     } finally {
@@ -113,8 +135,8 @@ export function PartnerInventory() {
             </div>
           </CardHeader>
           
-          <CardContent className="space-y-6 flex-1 flex flex-col justify-between">
-            <div className="space-y-4">
+          <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+            <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Wholesale</span>
@@ -127,29 +149,57 @@ export function PartnerInventory() {
               </div>
 
               {/* Quick Restock Section */}
-              <div className="p-4 bg-primary/5 rounded-2xl space-y-3">
+              <div className="p-3 bg-primary/5 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
-                   <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
-                     <RefreshCw className="h-3 w-3" /> Quick Restock
+                   <Label className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
+                     <RefreshCw className="h-2.5 w-2.5" /> Quick Restock
                    </Label>
-                   <span className="text-[10px] font-bold opacity-50">Current: {product.stock || 0}</span>
+                   <span className="text-[9px] font-bold opacity-50">Current: {product.stock || 0}</span>
                 </div>
                 <div className="flex gap-2">
                    <Input 
                     type="number" 
-                    placeholder="Set new qty" 
-                    className="h-9 rounded-xl border-none shadow-sm text-xs"
+                    placeholder="New qty" 
+                    className="h-8 rounded-lg border-none shadow-sm text-[10px]"
                     value={stockInputs[product.id] || ''}
                     onChange={(e) => setStockInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
                    />
                    <Button 
                     size="sm" 
                     variant="secondary" 
-                    className="h-9 rounded-xl px-3"
+                    className="h-8 rounded-lg px-2 text-[10px] font-bold"
                     onClick={() => handleUpdateStock(product.id)}
                     disabled={updatingId === product.id}
                    >
-                     {updatingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sync'}
+                     {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sync'}
+                   </Button>
+                </div>
+              </div>
+
+              {/* Price Update Section */}
+              <div className="p-3 bg-accent/5 rounded-2xl space-y-2 border border-accent/10">
+                <div className="flex items-center justify-between">
+                   <Label className="text-[9px] font-black uppercase tracking-widest text-accent-foreground flex items-center gap-1.5">
+                     <DollarSign className="h-2.5 w-2.5" /> Update Price
+                   </Label>
+                   <span className="text-[9px] font-bold opacity-50">INR {product.price}</span>
+                </div>
+                <div className="flex gap-2">
+                   <Input 
+                    type="number" 
+                    placeholder="New price" 
+                    className="h-8 rounded-lg border-none shadow-sm text-[10px]"
+                    value={priceInputs[product.id] || ''}
+                    onChange={(e) => setPriceInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
+                   />
+                   <Button 
+                    size="sm" 
+                    variant="default" 
+                    className="h-8 rounded-lg px-2 text-[10px] font-bold bg-accent text-accent-foreground hover:bg-accent/80"
+                    onClick={() => handleUpdatePrice(product.id)}
+                    disabled={updatingId === product.id}
+                   >
+                     {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Update'}
                    </Button>
                 </div>
               </div>

@@ -24,7 +24,7 @@ export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();
   const { firestore, auth } = useFirebase();
   const storage = useStorage();
-  const { isWholesaler, refetchUserProfile } = useAppContext();
+  const { isWholesaler, isAdmin, refetchUserProfile } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -34,11 +34,12 @@ export default function PartnerDashboardPage() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
 
+  // Allow both wholesalers AND admins to access this dashboard
   useEffect(() => {
-    if (!isUserLoading && !isWholesaler) {
+    if (!isUserLoading && !isWholesaler && !isAdmin) {
       router.push('/');
     }
-  }, [user, isUserLoading, isWholesaler, router]);
+  }, [user, isUserLoading, isWholesaler, isAdmin, router]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -47,13 +48,13 @@ export default function PartnerDashboardPage() {
         const snap = await getDoc(doc(firestore, 'users', user.uid));
         if (snap.exists()) {
           const data = snap.data() as UserProfile;
-          setBusinessName(data.businessName || '');
+          setBusinessName(data.businessName || (isAdmin ? 'Admin Boutique' : ''));
           setBannerPreview(data.bannerUrl || null);
         }
       } catch (err) {}
     }
     loadProfile();
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isAdmin]);
 
   const handleLogout = () => {
     if (auth) {
@@ -87,7 +88,8 @@ export default function PartnerDashboardPage() {
       await setDoc(doc(firestore, 'users', user.uid), {
         businessName: businessName.trim(),
         bannerUrl,
-        role: 'wholesaler',
+        // Preserve role or set correctly
+        role: isAdmin ? 'admin' : 'wholesaler',
         updatedAt: serverTimestamp()
       }, { merge: true });
 
@@ -109,7 +111,7 @@ export default function PartnerDashboardPage() {
     }
   };
 
-  if (isUserLoading || !isWholesaler) {
+  if (isUserLoading || (!isWholesaler && !isAdmin)) {
     return <div className="container mx-auto px-4 py-20 text-center">Loading dashboard...</div>;
   }
 
@@ -121,8 +123,8 @@ export default function PartnerDashboardPage() {
             <LayoutDashboard className="h-8 w-8" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-5xl font-headline text-primary">{businessName || 'Wholesale Center'}</h1>
-            <p className="text-muted-foreground font-medium italic text-xs">Partner ID: {user?.uid.slice(-6)}</p>
+            <h1 className="text-3xl md:text-5xl font-headline text-primary">{businessName || (isAdmin ? 'Admin Boutique' : 'Wholesale Center')}</h1>
+            <p className="text-muted-foreground font-medium italic text-xs">{isAdmin ? 'Master Administrator' : 'Wholesale Partner'} • ID: {user?.uid.slice(-6)}</p>
           </div>
         </div>
         

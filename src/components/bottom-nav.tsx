@@ -71,9 +71,9 @@ export function BottomNav() {
                 <Settings className="h-5 w-5" /> Admin Panel
               </Link>
             )}
-            {isWholesaler && (
+            {(isWholesaler || isAdmin) && (
               <Link href="/partner/dashboard" className="flex items-center gap-3 p-4 rounded-2xl bg-accent text-accent-foreground font-headline text-lg mb-2">
-                <LayoutDashboard className="h-5 w-5" /> Partner Dashboard
+                <LayoutDashboard className="h-5 w-5" /> Boutique Dashboard
               </Link>
             )}
 

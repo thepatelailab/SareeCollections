@@ -105,10 +105,10 @@ export function Header() {
              </Button>
           )}
 
-          {isWholesaler && (
+          {(isWholesaler || isAdmin) && (
              <Button variant="outline" size="sm" asChild className="hidden md:flex h-9 rounded-full border-primary/20 bg-primary/5 text-primary font-black uppercase text-[8px] tracking-[0.1em] px-4 gap-2">
                 <Link href="/partner/dashboard">
-                  <LayoutDashboard className="h-3 w-3" /> Dashboard
+                  <LayoutDashboard className="h-3 w-3" /> Boutique
                 </Link>
              </Button>
           )}
@@ -143,9 +143,9 @@ export function Header() {
                     <DropdownMenuItem asChild className="p-2.5">
                       <Link href="/my-account/orders"><Package className="mr-2.5 h-4 w-4" />My Orders</Link>
                     </DropdownMenuItem>
-                    {isWholesaler && (
+                    {(isWholesaler || isAdmin) && (
                       <DropdownMenuItem asChild className="p-2.5">
-                        <Link href="/partner/dashboard"><LayoutDashboard className="mr-2.5 h-4 w-4" />Dashboard</Link>
+                        <Link href="/partner/dashboard"><LayoutDashboard className="mr-2.5 h-4 w-4" />Boutique</Link>
                       </DropdownMenuItem>
                     )}
                     {isAdmin && (
