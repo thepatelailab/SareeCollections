@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, Search, Settings, Package } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Search, Settings, Package, LayoutDashboard } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/components/providers/cart-provider';
@@ -31,7 +31,7 @@ import React from 'react';
 
 export function Header() {
   const { cartCount } = useCartContext();
-  const { isAdmin, sareeVarieties } = useAppContext();
+  const { isAdmin, isWholesaler, sareeVarieties } = useAppContext();
   const { user } = useUser();
   const auth = useAuth();
 
@@ -104,6 +104,14 @@ export function Header() {
                 </Link>
              </Button>
           )}
+
+          {isWholesaler && (
+             <Button variant="outline" size="sm" asChild className="hidden md:flex h-9 rounded-full border-primary/20 bg-primary/5 text-primary font-black uppercase text-[8px] tracking-[0.1em] px-4 gap-2">
+                <Link href="/partner/dashboard">
+                  <LayoutDashboard className="h-3 w-3" /> Dashboard
+                </Link>
+             </Button>
+          )}
           
           <Button variant="ghost" size="icon" asChild className="relative rounded-full h-9 w-9 text-primary hover:bg-primary/5">
             <Link href="/cart">
@@ -129,11 +137,17 @@ export function Header() {
                     <DropdownMenuLabel className="flex flex-col p-3">
                       <span className="font-headline text-base">Account</span>
                       {isAdmin && <span className="text-[9px] text-primary font-bold uppercase tracking-wider mt-0.5">Store Admin</span>}
+                      {isWholesaler && <span className="text-[9px] text-accent-foreground font-bold uppercase tracking-wider mt-0.5">Partner Wholesaler</span>}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild className="p-2.5">
                       <Link href="/my-account/orders"><Package className="mr-2.5 h-4 w-4" />My Orders</Link>
                     </DropdownMenuItem>
+                    {isWholesaler && (
+                      <DropdownMenuItem asChild className="p-2.5">
+                        <Link href="/partner/dashboard"><LayoutDashboard className="mr-2.5 h-4 w-4" />Dashboard</Link>
+                      </DropdownMenuItem>
+                    )}
                     {isAdmin && (
                       <DropdownMenuItem asChild className="p-2.5">
                         <Link href="/admin/settings"><Settings className="mr-2.5 h-4 w-4" />Settings</Link>
