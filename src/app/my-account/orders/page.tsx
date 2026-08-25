@@ -119,21 +119,28 @@ export default function MyOrdersPage() {
                   </h4>
                   <div className="grid gap-4">
                     {order.items?.map((item, idx) => {
-                      // Normalize item for legacy string-only items
+                      // Normalize item for legacy string-only items or incomplete objects
                       const isLegacy = typeof item === 'string';
                       const name = isLegacy ? item : (item.name || 'Unknown Product');
                       const price = isLegacy ? 0 : (item.price || 0);
-                      const image = isLegacy ? null : item.image;
+                      // Fallback check for multiple image field names
+                      const image = isLegacy ? null : (item.image || (item as any).thumbnailImg || (item as any).sareeImg);
                       const quantity = isLegacy ? 1 : (item.quantity || 1);
 
                       return (
                         <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-[#F9F9F4] rounded-3xl border border-primary/5 group hover:bg-[#F3F4ED] transition-colors">
                           <div className="flex items-center gap-6">
-                            <div className="h-20 w-16 relative rounded-2xl overflow-hidden shadow-md border border-white shrink-0">
+                            <div className="h-20 w-16 relative rounded-2xl overflow-hidden shadow-md border border-white shrink-0 bg-muted">
                               {image ? (
-                                <Image src={image} alt={name} fill className="object-cover" />
+                                <Image 
+                                  src={image} 
+                                  alt={name} 
+                                  fill 
+                                  className="object-cover"
+                                  unoptimized={image.startsWith('data:')}
+                                />
                               ) : (
-                                <div className="h-full w-full flex items-center justify-center bg-muted">
+                                <div className="h-full w-full flex items-center justify-center">
                                   <Package className="h-6 w-6 text-muted-foreground/30" />
                                 </div>
                               )}
