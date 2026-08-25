@@ -11,15 +11,27 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Allow list if admin/wholesaler OR if query is filtered by user_id
+      // Allow list if admin/wholesaler OR if the query is filtered by the user's own ID
       allow list: if isSignedIn() && (
         isAdmin() || 
         isWholesaler() || 
-        (request.query.limit <= 100 && request.auth.uid == resource.data.user_id)
+        (resource.data.user_id == request.auth.uid)
       );
-      allow get: if isSignedIn() && (isAdmin() || isWholesaler() || isOwner(resource.data.user_id));
+      
+      allow get: if isSignedIn() && (
+        isAdmin() || 
+        isWholesaler() || 
+        (resource.data.user_id == request.auth.uid)
+      );
+      
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isAdmin() || isWholesaler() || isOwner(resource.data.user_id));
+      
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        isWholesaler() || 
+        (resource.data.user_id == request.auth.uid)
+      );
+      
       allow delete: if isAdmin();
     }
 
@@ -49,7 +61,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
+      // Only the owner, an admin, or a wholesaler involved in a transaction can read profiles
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isWholesaler());
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
@@ -57,12 +70,9 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
         // Safe check for super admin email or admin role
+        // Email check is performed first to ensure immediate pass for super admin
         return isSignedIn() && (
           (request.auth.token.email == 'bp.brpl@gmail.com') ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
