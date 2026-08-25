@@ -11,10 +11,9 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // PERMANENT FIX: Disable order collection listing to stop permission errors.
-      // We will remove all UI that attempts to list this collection.
-      allow get: if isSignedIn();
-      allow list: if false; 
+      // Allow users to see and list their own orders. 
+      // This prevents "Missing Permissions" crashes if a query is triggered.
+      allow get, list: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
       
       allow create: if isSignedIn();
       allow update: if isAdmin() || (isWholesaler() && resource.data.items[0].ownerId == request.auth.uid);
