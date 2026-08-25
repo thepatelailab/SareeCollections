@@ -21,21 +21,22 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/components/providers/app-provider';
 
 export function PartnerOrders() {
   const { user } = useUser();
+  const { isWholesaler, isRoleLoaded } = useAppContext();
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [fulfillmentData, setFulfillmentData] = useState<Record<string, { courier: string; trackingId: string }>>({});
 
-  // Wholesalers can list all orders, but we filter in memory for simplicity in this prototype.
-  // In a production app, we'd use a more specific query with involved_partner_ids.
+  // CRITICAL: Guard query with isWholesaler and isRoleLoaded to prevent Permission Denied for standard customers
   const globalOrdersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid || !isWholesaler || !isRoleLoaded) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(50));
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isWholesaler, isRoleLoaded]);
 
   const { data: allOrders, isLoading } = useCollection<Order>(globalOrdersQuery as any);
 
@@ -65,7 +66,6 @@ export function PartnerOrders() {
         updated_at: serverTimestamp(),
       });
       toast({ title: 'Order Dispatched', description: 'Logistics details have been synced with the buyer.' });
-      // Clear local state for this order
       setFulfillmentData(prev => {
         const next = { ...prev };
         delete next[orderId];
@@ -95,7 +95,7 @@ export function PartnerOrders() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !isRoleLoaded) {
     return (
       <div className="space-y-6">
         {[1, 2].map(i => <Skeleton key={i} className="h-64 w-full rounded-[2.5rem]" />)}

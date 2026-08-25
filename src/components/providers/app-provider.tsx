@@ -42,6 +42,7 @@ export interface SareeVariety {
 interface AppContextType {
   isAdmin: boolean;
   isWholesaler: boolean;
+  isRoleLoaded: boolean;
   products: Product[];
   sareeVarieties: SareeVariety[];
   addProduct: (product: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }) => Promise<void>;
@@ -101,6 +102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isWholesaler, setIsWholesaler] = useState(false);
+  const [isRoleLoaded, setIsRoleLoaded] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -114,41 +116,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isHeroImageLoading, setIsHeroImageLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!firestore || !user?.uid || user.isAnonymous) {
+    if (!firestore || !user?.uid) {
       setUserProfile(null);
+      setIsRoleLoaded(!isUserLoading);
       return;
     }
+    
+    // Super Admin Fast Path
+    if (user.email === ADMIN_EMAIL) {
+      setIsAdmin(true);
+      setIsWholesaler(false);
+      setIsRoleLoaded(true);
+    }
+
     try {
       const userDocRef = doc(firestore, 'users', user.uid);
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
-        setUserProfile(docSnap.data() as UserProfile);
+        const profile = docSnap.data() as UserProfile;
+        setUserProfile(profile);
+        setIsAdmin(profile.role === 'admin' || user.email === ADMIN_EMAIL);
+        setIsWholesaler(profile.role === 'wholesaler');
       } else {
         setUserProfile(null);
+        // If profile doesn't exist, they are a basic customer unless super admin
+        setIsAdmin(user.email === ADMIN_EMAIL);
+        setIsWholesaler(false);
       }
     } catch (e) {
-      // Safe fallback: if profile is blocked by rules, we still have the email check
-      setUserProfile(null);
+      console.warn("Profile fetch skipped due to permissions.");
+    } finally {
+      setIsRoleLoaded(true);
     }
-  }, [firestore, user?.uid, user?.isAnonymous]);
+  }, [firestore, user?.uid, user?.email, isUserLoading]);
 
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
-
-  useEffect(() => {
-    const isSuperAdminEmail = user?.email === ADMIN_EMAIL;
-    if (userProfile) {
-      setIsAdmin(userProfile.role === 'admin' || isSuperAdminEmail);
-      setIsWholesaler(userProfile.role === 'wholesaler');
-    } else if (isSuperAdminEmail) {
-      setIsAdmin(true);
-      setIsWholesaler(false);
-    } else {
-      setIsAdmin(false);
-      setIsWholesaler(false);
-    }
-  }, [userProfile, user?.email]);
 
   useEffect(() => {
     async function initFetch() {
@@ -353,10 +357,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     () => ({
       isAdmin,
       isWholesaler,
+      isRoleLoaded,
       products,
       sareeVarieties,
       addProduct,
-      isLoading: isUserLoading || isLoadingProducts,
+      isLoading: isUserLoading || isLoadingProducts || !isRoleLoaded,
       isFetchingMore,
       hasMore,
       loadMore,
@@ -366,7 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refetchUserProfile: fetchUserProfile,
       incrementProductMetric,
     }),
-    [isAdmin, isWholesaler, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, updateHeroImage, fetchUserProfile]
+    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, updateHeroImage, fetchUserProfile]
   );
 
   return (

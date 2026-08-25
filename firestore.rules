@@ -11,12 +11,13 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Consolidated rule for list/get to satisfy "Rules are Not Filters" statically for Admins/Wholesalers
-      allow list, get: if isSignedIn() && (
-        isAdmin() || 
-        isWholesaler() || 
-        (resource != null && resource.data.user_id == request.auth.uid)
-      );
+      // Rule 1: Admin/Wholesaler can list/get everything
+      allow list, get: if isSignedIn() && (isAdmin() || isWholesaler());
+      
+      // Rule 2: Normal customers can ONLY list their own orders
+      // Note: This requires the frontend query to have a matching .where('user_id', '==', auth.uid)
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.user_id == request.auth.uid;
       
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (isAdmin() || isWholesaler() || (resource != null && resource.data.user_id == request.auth.uid));
@@ -49,7 +50,6 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Profiles are readable by owner or admins
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
@@ -59,7 +59,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-        // High-priority short-circuit for super admin email
+        // Instant check for super admin email to bypass document lookup latency
         return isSignedIn() && (
           (request.auth.token.email == 'bp.brpl@gmail.com') ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 

@@ -11,17 +11,17 @@ import { useAppContext } from '@/components/providers/app-provider';
 
 export function ActivityTracker() {
   const { firestore } = useFirestore();
-  const { isAdmin } = useAppContext();
+  const { isAdmin, isRoleLoaded } = useAppContext();
 
   const globalOrdersQuery = useMemoFirebase(() => {
     // CRITICAL: Prevent "Permission Denied" by keeping query null until Admin status is locked
-    if (!firestore || !isAdmin) return null;
+    if (!firestore || !isAdmin || !isRoleLoaded) return null;
     return query(collection(firestore, 'orders'), orderBy('created_at', 'desc'), limit(100));
-  }, [firestore, isAdmin]);
+  }, [firestore, isAdmin, isRoleLoaded]);
 
   const { data: orders, isLoading } = useCollection<Order>(globalOrdersQuery as any);
 
-  if (isLoading) {
+  if (isLoading || !isRoleLoaded) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-3 gap-6">
