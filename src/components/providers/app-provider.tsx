@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -68,10 +67,6 @@ const DEFAULT_VARIETIES = [
   { id: "v6", name: "Chanderi", description: "Lightweight sheer elegance.", stateId: "mp" },
 ];
 
-/**
- * Client-side image resizer using Canvas API.
- * This avoids the need for Cloud Functions for basic thumbnail generation.
- */
 async function createThumbnail(fileOrUrl: File | string, maxWidth = 400): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -123,11 +118,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserProfile(null);
       return;
     }
-    const userDocRef = doc(firestore, 'users', user.uid);
-    const docSnap = await getDoc(userDocRef);
-    if (docSnap.exists()) {
-      setUserProfile(docSnap.data() as UserProfile);
-    } else {
+    try {
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const docSnap = await getDoc(userDocRef);
+      if (docSnap.exists()) {
+        setUserProfile(docSnap.data() as UserProfile);
+      } else {
+        setUserProfile(null);
+      }
+    } catch (e) {
+      // Safe fallback: if profile is blocked by rules, we still have the email check
       setUserProfile(null);
     }
   }, [firestore, user?.uid, user?.isAnonymous]);
@@ -150,23 +150,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userProfile, user?.email]);
 
-  // Initial Product Fetch with Phase 3 Local Caching
   useEffect(() => {
     async function initFetch() {
       if (!firestore) return;
       
-      // 1. Try loading from IndexedDB first (Instant Load)
       try {
         const cached = await getCachedProducts();
         if (cached.length > 0) {
           setProducts(cached);
-          setIsLoadingProducts(false); // Stop showing loading state immediately
+          setIsLoadingProducts(false);
         }
       } catch (e) {
-        console.warn("IndexedDB Load Failed:", e);
+        console.warn("IDB Load Bypass:", e);
       }
 
-      // 2. Fetch fresh data from Firestore to sync
       try {
         const q = query(
           collection(firestore, 'SareeCollection'), 
@@ -176,14 +173,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const snap = await getDocs(q);
         const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
         
-        // 3. Update state and save to Cache
         setProducts(fetched);
         setLastDoc(snap.docs[snap.docs.length - 1] || null);
         setHasMore(snap.docs.length === PAGE_SIZE);
         
         saveProductsToCache(fetched);
       } catch (e) {
-        console.error("Firestore Fetch failed", e);
+        console.error("Firestore Sync bypass", e);
       } finally {
         setIsLoadingProducts(false);
       }
@@ -191,7 +187,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     initFetch();
   }, [firestore]);
 
-  // Load More Functionality with Cache Support
   const loadMore = async () => {
     if (!firestore || !lastDoc || isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
@@ -210,16 +205,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLastDoc(snap.docs[snap.docs.length - 1] || null);
       setHasMore(snap.docs.length === PAGE_SIZE);
 
-      // Persist the extended list
       saveProductsToCache(fetched);
     } catch (e) {
-      console.error("Load more failed", e);
+      console.error("Load more bypassed", e);
     } finally {
       setIsFetchingMore(false);
     }
   };
 
-  // Varieties Fetch (One-time)
   useEffect(() => {
     async function fetchVarieties() {
       if (!firestore) return;
@@ -274,14 +267,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore) return;
     const docRef = doc(firestore, 'SareeCollection', productId);
     updateDoc(docRef, { [metric]: increment(1) }).catch(e => {
-       console.error("Metric update failed", e);
+       console.error("Metric sync delay", e);
     });
-    // Optimistic UI update
     setProducts(prev => {
-      const updated = prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
-      // We don't save metrics to IDB immediately to avoid heavy churn, 
-      // they'll be synced next time a fetch happens.
-      return updated;
+      return prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
     });
   };
 
@@ -294,17 +283,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newDocRef = doc(collection(firestore, 'SareeCollection'));
     const productId = newDocRef.id;
 
-    // 1. Prepare Paths
     const sareeImageRef = ref(storage, `SareeCollection/${productId}/saree.jpg`);
     const modelImageRef = ref(storage, `SareeCollection/${productId}/model.jpg`);
     const thumbSareeRef = ref(storage, `SareeCollection/${productId}/thumb_saree.jpg`);
     const thumbModelRef = ref(storage, `SareeCollection/${productId}/thumb_model.jpg`);
 
-    // 2. Generate Thumbnails Client-Side (Phase 2 Optimization)
     const sareeThumbBlob = await createThumbnail(newProductData.sareeImageFile);
     const modelThumbBlob = await createThumbnail(newProductData.modelImageDataUrl);
 
-    // 3. Upload Originals
     const sareeUploadSnapshot = await uploadBytes(sareeImageRef, newProductData.sareeImageFile);
     const sareeImgUrl = await getDownloadURL(sareeUploadSnapshot.ref);
 
@@ -313,7 +299,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const modelUploadSnapshot = await uploadBytes(modelImageRef, modelImageBlob);
     const modelImgUrl = await getDownloadURL(modelUploadSnapshot.ref);
 
-    // 4. Upload Thumbnails
     const thumbSareeSnap = await uploadBytes(thumbSareeRef, sareeThumbBlob);
     const thumbSareeUrl = await getDownloadURL(thumbSareeSnap.ref);
 
