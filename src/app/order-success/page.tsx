@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Package, ArrowRight, Heart } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Heart } from 'lucide-react';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -41,13 +41,8 @@ function SuccessContent() {
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Button asChild size="lg" className="h-16 rounded-2xl px-10 font-headline text-xl bg-primary shadow-xl group">
-          <Link href="/my-account/orders">
-            <Package className="mr-2 h-5 w-5" /> Track My Order Status <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="lg" className="h-16 rounded-2xl px-10 font-headline text-xl border-primary/10">
           <Link href="/">
-            <Heart className="mr-2 h-5 w-5 text-red-500" /> Continue Exploring
+            Return to Marketplace <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </Button>
       </div>

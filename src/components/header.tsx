@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, Search, Settings, Sparkles, ShieldAlert, Package } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Search, Settings, ShieldAlert } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/components/providers/cart-provider';
@@ -70,10 +70,8 @@ export function Header() {
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-4 transition-opacity uppercase tracking-[0.2em] flex items-center gap-2")}>
-                  <Link href="/crochet">
-                    <Sparkles className="h-3 w-3 text-accent-foreground" /> CROCHET HUB
-                  </Link>
+                <NavigationMenuLink asChild className={cn(navigationMenuTriggerStyle(), "bg-transparent font-headline text-primary text-[9px] font-bold opacity-70 hover:opacity-100 px-4 transition-opacity uppercase tracking-[0.2em]")}>
+                  <Link href="/crochet">CROCHET HUB</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -102,7 +100,7 @@ export function Header() {
           {isAdmin && (
              <Button variant="outline" size="sm" asChild className="hidden md:flex h-9 rounded-full border-primary/20 bg-primary/5 text-primary font-black uppercase text-[8px] tracking-[0.1em] px-4 gap-2">
                 <Link href="/admin/settings">
-                  <ShieldAlert className="h-3 w-3" /> Admin Control
+                  <Settings className="h-3 w-3" /> Admin
                 </Link>
              </Button>
           )}
@@ -133,11 +131,6 @@ export function Header() {
                       {isAdmin && <span className="text-[9px] text-primary font-bold uppercase tracking-wider mt-0.5">Store Admin</span>}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="p-2.5">
-                      <Link href="/my-account/orders">
-                        <Package className="mr-2.5 h-4 w-4" /> My Orders
-                      </Link>
-                    </DropdownMenuItem>
                     {isAdmin && (
                       <DropdownMenuItem asChild className="p-2.5">
                         <Link href="/admin/settings"><Settings className="mr-2.5 h-4 w-4" />Settings</Link>
