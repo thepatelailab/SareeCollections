@@ -170,7 +170,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
 
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
-              <span className="text-[10px] md:text-xs text-muted-foreground line-through opacity-50 font-black uppercase tracking-widest">Original Value: INR {Math.round(product.price * 1.3)}</span>
+              <span className="text-[10px] font-black tracking-widest text-muted-foreground line-through opacity-50 uppercase">Original Value: INR {Math.round(product.price * 1.3)}</span>
               <span className="text-4xl md:text-5xl font-black text-primary tracking-tight">INR {product.price}</span>
             </div>
             {isOutOfStock ? (
@@ -221,7 +221,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               onClick={() => !isOutOfStock && addToCart(product)}
               disabled={isOutOfStock}
             >
-              {isOutOfStock ? 'Currently Unavailable' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Reserve This Piece</>}
+              {isOutOfStock ? 'Currently Unavailable' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Add to Cart</>}
             </Button>
             
             {!isOutOfStock && (

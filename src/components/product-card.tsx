@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -241,7 +240,7 @@ export function ProductCard({ product }: ProductCardProps) {
             aria-label={isOutOfStock ? "Sold Out" : `Add ${product.name} to cart`}
             disabled={isOutOfStock}
           >
-            {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-2.5 h-4.5 w-4.5" /> Acquire</>}
+            {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-2.5 h-4.5 w-4.5" /> Add to Cart</>}
           </Button>
         </div>
       </div>

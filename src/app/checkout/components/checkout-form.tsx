@@ -264,7 +264,7 @@ export function CheckoutForm() {
                 className="w-full py-8 text-xl font-headline bg-primary rounded-2xl shadow-xl" 
                 disabled={isProcessing}
               >
-                {isProcessing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <><CreditCard className="mr-2 h-6 w-6" /> Acquire Now</>}
+                {isProcessing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <><CreditCard className="mr-2 h-6 w-6" /> Place Order</>}
               </Button>
             </form>
           </Form>
