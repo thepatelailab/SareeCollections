@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -264,7 +263,7 @@ export function PartnerInventory() {
                   onClick={() => handleArchiveToggle(product.id, product.isArchived || false)}
                   disabled={updatingId === product.id}
                 >
-                  {updatingId === productId ? <Loader2 className="h-4 w-4 animate-spin" /> : product.isArchived ? <RefreshCw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  {updatingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : product.isArchived ? <RefreshCw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                 </Button>
 
                 {/* Permanent Delete Action - Only for Archived Items to Save Cost */}
