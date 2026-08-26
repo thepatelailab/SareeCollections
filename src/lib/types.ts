@@ -19,6 +19,7 @@ export interface Product {
   shares?: number;
   ownerId?: string;
   updatedAt?: any; 
+  isArchived?: boolean;
 }
 
 export interface CartItem extends Product {

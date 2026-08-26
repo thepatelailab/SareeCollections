@@ -1,24 +1,27 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import { Product } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2, DollarSign } from 'lucide-react';
+import { Archive, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2, DollarSign, ArchiveX } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SocialCampaignDialog } from './social-campaign-dialog';
 import { useState } from 'react';
+import { useAppContext } from '@/components/providers/app-provider';
 
 export function PartnerInventory() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { archiveProduct } = useAppContext();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [stockInputs, setStockInputs] = useState<Record<string, string>>({});
@@ -31,15 +34,19 @@ export function PartnerInventory() {
 
   const { data: products, isLoading } = useCollection<Product>(myProductsQuery as any);
 
-  const handleDelete = async (id: string) => {
+  const handleArchiveToggle = async (productId: string, currentStatus: boolean) => {
     if (!firestore) return;
-    if (!confirm('Are you sure you want to remove this piece from your boutique?')) return;
+    const action = !currentStatus ? 'archive' : 'restore';
+    if (!confirm(`Are you sure you want to ${action} this piece? It will ${!currentStatus ? 'be hidden from' : 'appear on'} the marketplace.`)) return;
     
+    setUpdatingId(productId);
     try {
-      await deleteDoc(doc(firestore, 'SareeCollection', id));
-      toast({ title: 'Item Removed', description: 'Product has been deleted from your inventory.' });
+      await archiveProduct(productId, !currentStatus);
+      toast({ title: `Item ${!currentStatus ? 'Archived' : 'Restored'}`, description: `The product visibility has been updated.` });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete product.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update archive status.' });
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -103,10 +110,16 @@ export function PartnerInventory() {
     );
   }
 
+  // Sort: Archived items at the bottom
+  const sortedProducts = [...products].sort((a, b) => {
+    if (a.isArchived === b.isArchived) return 0;
+    return a.isArchived ? 1 : -1;
+  });
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {products.map((product) => (
-        <Card key={product.id} className="group overflow-hidden rounded-[2rem] border-primary/5 shadow-lg transition-all hover:shadow-2xl flex flex-col">
+      {sortedProducts.map((product) => (
+        <Card key={product.id} className={`group overflow-hidden rounded-[2rem] border-primary/5 shadow-lg transition-all hover:shadow-2xl flex flex-col ${product.isArchived ? 'opacity-60 grayscale-[0.5]' : ''}`}>
           <div className="aspect-[4/5] relative overflow-hidden">
             <Image 
               src={product.sareeImg} 
@@ -121,6 +134,11 @@ export function PartnerInventory() {
               <Badge className={`${(product.stock || 0) > 0 ? 'bg-accent text-accent-foreground' : 'bg-destructive text-white'} border-none text-[9px] font-black uppercase`}>
                 {(product.stock || 0) > 0 ? `Stock: ${product.stock}` : 'Sold Out'}
               </Badge>
+              {product.isArchived && (
+                <Badge className="bg-primary text-white border-none text-[9px] font-black uppercase flex items-center gap-1">
+                  <Archive className="h-2 w-2" /> Archived
+                </Badge>
+              )}
             </div>
           </div>
           
@@ -129,7 +147,7 @@ export function PartnerInventory() {
               <div>
                 <CardTitle className="font-headline text-xl text-primary">{product.name}</CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">
-                  Wholesale Listed
+                  {product.isArchived ? 'Hidden from Store' : 'Wholesale Listed'}
                 </CardDescription>
               </div>
             </div>
@@ -149,65 +167,69 @@ export function PartnerInventory() {
               </div>
 
               {/* Quick Restock Section */}
-              <div className="p-3 bg-primary/5 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                   <Label className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
-                     <RefreshCw className="h-2.5 w-2.5" /> Quick Restock
-                   </Label>
-                   <span className="text-[9px] font-bold opacity-50">Current: {product.stock || 0}</span>
+              {!product.isArchived && (
+                <div className="p-3 bg-primary/5 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
+                      <RefreshCw className="h-2.5 w-2.5" /> Quick Restock
+                    </Label>
+                    <span className="text-[9px] font-bold opacity-50">Current: {product.stock || 0}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      placeholder="New qty" 
+                      className="h-8 rounded-lg border-none shadow-sm text-[10px]"
+                      value={stockInputs[product.id] || ''}
+                      onChange={(e) => setStockInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="secondary" 
+                      className="h-8 rounded-lg px-2 text-[10px] font-bold"
+                      onClick={() => handleUpdateStock(product.id)}
+                      disabled={updatingId === product.id}
+                    >
+                      {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sync'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                   <Input 
-                    type="number" 
-                    placeholder="New qty" 
-                    className="h-8 rounded-lg border-none shadow-sm text-[10px]"
-                    value={stockInputs[product.id] || ''}
-                    onChange={(e) => setStockInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
-                   />
-                   <Button 
-                    size="sm" 
-                    variant="secondary" 
-                    className="h-8 rounded-lg px-2 text-[10px] font-bold"
-                    onClick={() => handleUpdateStock(product.id)}
-                    disabled={updatingId === product.id}
-                   >
-                     {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sync'}
-                   </Button>
-                </div>
-              </div>
+              )}
 
               {/* Price Update Section */}
-              <div className="p-3 bg-accent/5 rounded-2xl space-y-2 border border-accent/10">
-                <div className="flex items-center justify-between">
-                   <Label className="text-[9px] font-black uppercase tracking-widest text-accent-foreground flex items-center gap-1.5">
-                     <DollarSign className="h-2.5 w-2.5" /> Update Price
-                   </Label>
-                   <span className="text-[9px] font-bold opacity-50">INR {product.price}</span>
+              {!product.isArchived && (
+                <div className="p-3 bg-accent/5 rounded-2xl space-y-2 border border-accent/10">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-accent-foreground flex items-center gap-1.5">
+                      <DollarSign className="h-2.5 w-2.5" /> Update Price
+                    </Label>
+                    <span className="text-[9px] font-bold opacity-50">INR {product.price}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      placeholder="New price" 
+                      className="h-8 rounded-lg border-none shadow-sm text-[10px]"
+                      value={priceInputs[product.id] || ''}
+                      onChange={(e) => setPriceInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="h-8 rounded-lg px-2 text-[10px] font-bold bg-accent text-accent-foreground hover:bg-accent/80"
+                      onClick={() => handleUpdatePrice(product.id)}
+                      disabled={updatingId === product.id}
+                    >
+                      {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Update'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                   <Input 
-                    type="number" 
-                    placeholder="New price" 
-                    className="h-8 rounded-lg border-none shadow-sm text-[10px]"
-                    value={priceInputs[product.id] || ''}
-                    onChange={(e) => setPriceInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
-                   />
-                   <Button 
-                    size="sm" 
-                    variant="default" 
-                    className="h-8 rounded-lg px-2 text-[10px] font-bold bg-accent text-accent-foreground hover:bg-accent/80"
-                    onClick={() => handleUpdatePrice(product.id)}
-                    disabled={updatingId === product.id}
-                   >
-                     {updatingId === product.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Update'}
-                   </Button>
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 pt-2">
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 rounded-full text-[10px] font-black uppercase" asChild>
+                <Button variant="outline" size="sm" className="flex-1 rounded-full text-[10px] font-black uppercase" asChild disabled={product.isArchived}>
                   <Link href={`/products/${product.id}`} target="_blank">
                     <Eye className="h-3 w-3 mr-2" /> View Live
                   </Link>
@@ -215,14 +237,15 @@ export function PartnerInventory() {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="rounded-full text-destructive border-destructive/20 hover:bg-destructive/5"
-                  onClick={() => handleDelete(product.id)}
+                  className={`rounded-full ${product.isArchived ? 'text-green-600 border-green-200' : 'text-primary border-primary/20 hover:bg-primary/5'}`}
+                  onClick={() => handleArchiveToggle(product.id, product.isArchived || false)}
+                  disabled={updatingId === product.id}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {updatingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : product.isArchived ? <RefreshCw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                 </Button>
               </div>
               
-              <SocialCampaignDialog product={product} />
+              {!product.isArchived && <SocialCampaignDialog product={product} />}
             </div>
           </CardContent>
         </Card>

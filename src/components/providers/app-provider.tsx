@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -46,6 +47,7 @@ interface AppContextType {
   products: Product[];
   sareeVarieties: SareeVariety[];
   addProduct: (product: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }) => Promise<void>;
+  archiveProduct: (productId: string, shouldArchive: boolean) => Promise<void>;
   isLoading: boolean;
   isFetchingMore: boolean;
   hasMore: boolean;
@@ -122,7 +124,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Super Admin Fast Path: bypass document lookup if email matches
     if (user.email === ADMIN_EMAIL) {
       setIsAdmin(true);
       setIsWholesaler(false);
@@ -142,7 +143,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsWholesaler(false);
       }
     } catch (e) {
-      // In case of permission errors during login sync, default to basic customer
       console.warn("Profile fetch deferred.");
     } finally {
       setIsRoleLoaded(true);
@@ -160,7 +160,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const cached = await getCachedProducts();
         if (cached.length > 0) {
-          setProducts(cached);
+          setProducts(cached.filter(p => !p.isArchived));
           setIsLoadingProducts(false);
         }
       } catch (e) {
@@ -171,16 +171,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const q = query(
           collection(firestore, 'SareeCollection'), 
           orderBy('id', 'desc'), 
-          limit(PAGE_SIZE)
+          limit(PAGE_SIZE * 2) // Fetch more to account for archived items
         );
         const snap = await getDocs(q);
-        const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+        const allFetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+        const filtered = allFetched.filter(p => !p.isArchived).slice(0, PAGE_SIZE);
         
-        setProducts(fetched);
+        setProducts(filtered);
         setLastDoc(snap.docs[snap.docs.length - 1] || null);
-        setHasMore(snap.docs.length === PAGE_SIZE);
+        setHasMore(snap.docs.length >= PAGE_SIZE);
         
-        saveProductsToCache(fetched);
+        saveProductsToCache(allFetched);
       } catch (e) {
         console.error("Product sync issue", e);
       } finally {
@@ -201,14 +202,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         limit(PAGE_SIZE)
       );
       const snap = await getDocs(q);
-      const fetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+      const allFetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+      const filtered = allFetched.filter(p => !p.isArchived);
       
-      const newProducts = [...products, ...fetched];
+      const newProducts = [...products, ...filtered];
       setProducts(newProducts);
       setLastDoc(snap.docs[snap.docs.length - 1] || null);
       setHasMore(snap.docs.length === PAGE_SIZE);
 
-      saveProductsToCache(fetched);
+      saveProductsToCache(allFetched);
     } catch (e) {
       console.error("Load more issue", e);
     } finally {
@@ -277,6 +279,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const archiveProduct = async (productId: string, shouldArchive: boolean) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'SareeCollection', productId);
+    await updateDoc(docRef, { isArchived: shouldArchive });
+    
+    // Remove from active marketplace list if archived
+    if (shouldArchive) {
+      setProducts(prev => prev.filter(p => p.id !== productId));
+    }
+  };
+
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
     if (!firestore || !auth?.currentUser) {
         throw new Error("Access denied.");
@@ -321,6 +334,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       shares: 0,
       ownerId: auth.currentUser.uid,
       updatedAt: serverTimestamp(),
+      isArchived: false,
     };
     
     await setDoc(newDocRef, finalProduct);
@@ -360,6 +374,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       products,
       sareeVarieties,
       addProduct,
+      archiveProduct,
       isLoading: isUserLoading || isLoadingProducts || !isRoleLoaded,
       isFetchingMore,
       hasMore,
@@ -370,7 +385,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refetchUserProfile: fetchUserProfile,
       incrementProductMetric,
     }),
-    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, updateHeroImage, fetchUserProfile]
+    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, updateHeroImage, fetchUserProfile]
   );
 
   return (
