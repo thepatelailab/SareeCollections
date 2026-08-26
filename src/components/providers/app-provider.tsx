@@ -15,6 +15,7 @@ import {
   setDoc, 
   getDoc, 
   updateDoc, 
+  deleteDoc,
   increment, 
   query, 
   orderBy, 
@@ -24,7 +25,7 @@ import {
   DocumentSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes, getStorage, deleteObject } from 'firebase/storage';
 import { useFirestore, useFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Product, UserProfile, ProductCategory } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
@@ -48,6 +49,7 @@ interface AppContextType {
   sareeVarieties: SareeVariety[];
   addProduct: (product: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }) => Promise<void>;
   archiveProduct: (productId: string, shouldArchive: boolean) => Promise<void>;
+  deleteProductPermanently: (productId: string) => Promise<void>;
   isLoading: boolean;
   isFetchingMore: boolean;
   hasMore: boolean;
@@ -284,9 +286,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const docRef = doc(firestore, 'SareeCollection', productId);
     await updateDoc(docRef, { isArchived: shouldArchive });
     
-    // Remove from active marketplace list if archived
+    // Refresh local list
     if (shouldArchive) {
       setProducts(prev => prev.filter(p => p.id !== productId));
+    }
+  };
+
+  const deleteProductPermanently = async (productId: string) => {
+    if (!firestore || !auth?.currentUser) return;
+    
+    const storage = getStorage();
+    const docRef = doc(firestore, 'SareeCollection', productId);
+    
+    try {
+      // 1. Delete files from Storage to save costs
+      const filePaths = [
+        `SareeCollection/${productId}/saree.jpg`,
+        `SareeCollection/${productId}/model.jpg`,
+        `SareeCollection/${productId}/thumb_saree.jpg`,
+        `SareeCollection/${productId}/thumb_model.jpg`,
+      ];
+
+      for (const path of filePaths) {
+        const fileRef = ref(storage, path);
+        await deleteObject(fileRef).catch(() => console.warn(`File already deleted or missing: ${path}`));
+      }
+
+      // 2. Delete Firestore Document
+      await deleteDoc(docRef);
+
+      // 3. Update local state
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      
+    } catch (e) {
+      console.error("Permanent deletion failed", e);
+      throw e;
     }
   };
 
@@ -375,6 +409,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       sareeVarieties,
       addProduct,
       archiveProduct,
+      deleteProductPermanently,
       isLoading: isUserLoading || isLoadingProducts || !isRoleLoaded,
       isFetchingMore,
       hasMore,
@@ -385,7 +420,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refetchUserProfile: fetchUserProfile,
       incrementProductMetric,
     }),
-    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, updateHeroImage, fetchUserProfile]
+    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, deleteProductPermanently, updateHeroImage, fetchUserProfile]
   );
 
   return (

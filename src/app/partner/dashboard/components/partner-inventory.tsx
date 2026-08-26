@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Archive, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2, DollarSign, ArchiveX } from 'lucide-react';
+import { Archive, ExternalLink, Package, IndianRupee, Eye, RefreshCw, Loader2, DollarSign, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -17,11 +17,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SocialCampaignDialog } from './social-campaign-dialog';
 import { useState } from 'react';
 import { useAppContext } from '@/components/providers/app-provider';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export function PartnerInventory() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const { archiveProduct } = useAppContext();
+  const { archiveProduct, deleteProductPermanently } = useAppContext();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [stockInputs, setStockInputs] = useState<Record<string, string>>({});
@@ -37,7 +48,6 @@ export function PartnerInventory() {
   const handleArchiveToggle = async (productId: string, currentStatus: boolean) => {
     if (!firestore) return;
     const action = !currentStatus ? 'archive' : 'restore';
-    if (!confirm(`Are you sure you want to ${action} this piece? It will ${!currentStatus ? 'be hidden from' : 'appear on'} the marketplace.`)) return;
     
     setUpdatingId(productId);
     try {
@@ -45,6 +55,18 @@ export function PartnerInventory() {
       toast({ title: `Item ${!currentStatus ? 'Archived' : 'Restored'}`, description: `The product visibility has been updated.` });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update archive status.' });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleDeletePermanently = async (productId: string) => {
+    setUpdatingId(productId);
+    try {
+      await deleteProductPermanently(productId);
+      toast({ title: 'Permanently Deleted', description: 'Record and images removed from storage.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Deletion Failed' });
     } finally {
       setUpdatingId(null);
     }
@@ -119,8 +141,8 @@ export function PartnerInventory() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {sortedProducts.map((product) => (
-        <Card key={product.id} className={`group overflow-hidden rounded-[2rem] border-primary/5 shadow-lg transition-all hover:shadow-2xl flex flex-col ${product.isArchived ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-          <div className="aspect-[4/5] relative overflow-hidden">
+        <Card key={product.id} className={`group overflow-hidden rounded-[2.5rem] border-primary/5 shadow-lg transition-all hover:shadow-2xl flex flex-col ${product.isArchived ? 'bg-muted/30 opacity-70' : ''}`}>
+          <div className={`aspect-[4/5] relative overflow-hidden ${product.isArchived ? 'grayscale-[0.8]' : ''}`}>
             <Image 
               src={product.sareeImg} 
               alt={product.name} 
@@ -234,6 +256,7 @@ export function PartnerInventory() {
                     <Eye className="h-3 w-3 mr-2" /> View Live
                   </Link>
                 </Button>
+                
                 <Button 
                   variant="outline" 
                   size="icon" 
@@ -241,8 +264,37 @@ export function PartnerInventory() {
                   onClick={() => handleArchiveToggle(product.id, product.isArchived || false)}
                   disabled={updatingId === product.id}
                 >
-                  {updatingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : product.isArchived ? <RefreshCw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  {updatingId === productId ? <Loader2 className="h-4 w-4 animate-spin" /> : product.isArchived ? <RefreshCw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                 </Button>
+
+                {/* Permanent Delete Action - Only for Archived Items to Save Cost */}
+                {product.isArchived && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="rounded-full text-destructive border-destructive/20 hover:bg-destructive/5" disabled={updatingId === product.id}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="font-headline text-2xl flex items-center gap-2">
+                           <AlertTriangle className="text-destructive h-6 w-6" /> Permanent Deletion
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base leading-relaxed">
+                          This action is irreversible. We will remove the product record and <strong>permanently delete all images from our storage servers</strong> to reduce costs.
+                          <br/><br/>
+                          Note: Order history for customers who already bought this item might show missing images.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel className="rounded-xl h-12">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeletePermanently(product.id)} className="rounded-xl h-12 bg-destructive text-white hover:bg-destructive/90">
+                           Confirm & Clear Storage
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
               
               {!product.isArchived && <SocialCampaignDialog product={product} />}
