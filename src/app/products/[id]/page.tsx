@@ -67,14 +67,33 @@ export default function ProductPage() {
     }
   };
 
+  const pageTitle = `${product.name} | SareeDukan Heritage Collection`;
+  const pageDesc = product.description.slice(0, 160);
+  const shareImage = product.modelImg || product.sareeImg;
+
   return (
     <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:image" content={shareImage} />
+        <meta property="og:url" content={typeof window !== 'undefined' ? window.location.href : ''} />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDesc} />
+        <meta name="twitter:image" content={shareImage} />
+      </Head>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <title>{`${product.name} | SareeDukan Heritage Collection`}</title>
-      <meta name="description" content={product.description.slice(0, 160)} />
       <ProductDetails product={product} />
     </>
   );

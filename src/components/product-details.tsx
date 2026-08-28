@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store, AlertTriangle } from 'lucide-react';
+import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store, AlertTriangle, Instagram, Copy, CheckCircle2 } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from './providers/cart-provider';
@@ -17,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useToast } from '@/hooks/use-toast';
 
 const FacebookIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" className="h-6 w-6 fill-[#1877F2]">
@@ -38,6 +40,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const { addToCart } = useCartContext();
   const { incrementProductMetric } = useAppContext();
   const [isLiked, setIsLiked] = useState(false);
+  const { toast } = useToast();
 
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
   const isOutOfStock = (product.stock ?? 0) <= 0;
@@ -51,15 +54,31 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     }
   };
 
-  const handleShare = (platform: 'whatsapp' | 'facebook', e: React.MouseEvent) => {
+  const handleShare = async (platform: 'whatsapp' | 'facebook' | 'instagram' | 'native', e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     incrementProductMetric(product.id, 'shares');
-    const text = `Take a look at this stunning ${product.name} I found on SareeDukan!`;
+    
+    const shareText = `Take a look at this stunning ${product.name} I found on SareeDukan!`;
+
+    if (platform === 'native' && navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: shareText,
+          url: productUrl,
+        });
+        return;
+      } catch (err) {}
+    }
+
     if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + productUrl)}`, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + productUrl)}`, '_blank');
     } else if (platform === 'facebook') {
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`, '_blank');
+    } else if (platform === 'instagram') {
+      navigator.clipboard.writeText(productUrl);
+      toast({ title: 'Link Copied!', description: 'Heritage link ready for Instagram.' });
     }
   };
 
@@ -120,13 +139,19 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                         <Share2 className="h-5 w-5 md:h-7 md:w-7" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-2 rounded-2xl shadow-2xl border-primary/10 bg-white/90 backdrop-blur-xl" align="start">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('whatsapp', e)} className="h-10 w-10 rounded-xl hover:bg-[#25D366]/10">
+                    <PopoverContent className="w-auto p-3 rounded-[2rem] shadow-2xl border-primary/10 bg-white/90 backdrop-blur-xl" align="start">
+                      <div className="flex gap-3">
+                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('whatsapp', e)} className="h-12 w-12 rounded-full hover:bg-[#25D366]/10">
                           <WhatsAppIcon />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('facebook', e)} className="h-10 w-10 rounded-xl hover:bg-[#1877F2]/10">
+                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('facebook', e)} className="h-12 w-12 rounded-full hover:bg-[#1877F2]/10">
                           <FacebookIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('instagram', e)} className="h-12 w-12 rounded-full hover:bg-pink-50">
+                          <Instagram className="h-6 w-6 text-pink-600" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => handleShare('native', e)} className="h-12 w-12 rounded-full hover:bg-primary/5">
+                          <Share2 className="h-6 w-6 text-primary" />
                         </Button>
                       </div>
                     </PopoverContent>
