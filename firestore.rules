@@ -11,9 +11,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // 2. Waitlist (Restock Requests): Open as requested to prioritize partner visibility
+    // 2. Waitlist (Restock Requests): Completely open to prioritize partner visibility
     match /restockRequests/{requestId} {
       allow read, write: if true;
+    }
+    
+    // Explicitly allow list operations at the collection level
+    match /restockRequests {
+      allow list: if true;
     }
 
     // 3. Orders: Accessible to signed-in users
