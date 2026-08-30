@@ -13,16 +13,15 @@ service cloud.firestore {
     }
 
     match /restockRequests/{requestId} {
+      // Removing restrictions to ensure partners can always view their waitlist
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
-      // Separating get and list for clarity. List requires query filters to match rules.
-      allow list: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.userId);
-      allow get: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.userId);
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
 
     match /orders/{orderId} {
-      // Allowing specific read/write permissions for orders
-      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.user_id || isOrderOwner(orderId));
+      // Streamlined order rules
+      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.user_id);
       allow write: if true; // Temporary broad write for checkout process
     }
 
@@ -73,12 +72,6 @@ service cloud.firestore {
         return isSignedIn() && 
                exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'wholesaler';
-    }
-    
-    function isOrderOwner(orderId) {
-        let orderData = get(/databases/$(database)/documents/orders/$(orderId)).data;
-        // Simple ownership check based on UID
-        return request.auth.uid == orderData.user_id;
     }
   }
 }
