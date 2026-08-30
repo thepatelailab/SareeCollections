@@ -8,10 +8,11 @@ import { RestockRequest } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Bell, Trash2, Mail, Package, Loader2 } from 'lucide-react';
+import { Bell, Trash2, Mail, Package, Loader2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/components/providers/app-provider';
+import Link from 'next/link';
 
 export function RestockRequests() {
   const { user } = useUser();
@@ -96,12 +97,24 @@ export function RestockRequests() {
               </TableHeader>
               <TableBody>
                 {filteredRequests.map((req) => (
-                  <TableRow key={req.id} className="border-primary/5 hover:bg-muted/10 transition-colors">
+                  <TableRow key={req.id} className="border-primary/5 hover:bg-muted/10 transition-colors group">
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/5 rounded-lg"><Package className="h-4 w-4 text-primary" /></div>
-                        <span className="font-bold text-primary text-sm">{req.productName}</span>
-                      </div>
+                      <Link 
+                        href={`/products/${req.productId}`} 
+                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                        target="_blank"
+                      >
+                        <div className="p-2 bg-primary/5 rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
+                          <Package className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-primary text-sm flex items-center gap-1.5">
+                            {req.productName}
+                            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </span>
+                          <span className="text-[9px] text-muted-foreground uppercase tracking-widest">View Details</span>
+                        </div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
