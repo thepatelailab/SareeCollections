@@ -3,22 +3,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. Saree Collection: Public read, restricted write
+    // 1. Waitlist (Restock Requests): COMPLETELY OPEN
+    // Priority #1: Remove all restrictions to ensure partner dashboard visibility.
+    match /restockRequests/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // 2. Saree Collection: Public read, restricted write
     match /SareeCollection/{sareeId} {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isAdmin();
-    }
-
-    // 2. Waitlist (Restock Requests): Completely open to prioritize partner visibility
-    match /restockRequests/{requestId} {
-      allow read, write: if true;
-    }
-    
-    // Explicitly allow list operations at the collection level
-    match /restockRequests {
-      allow list: if true;
     }
 
     // 3. Orders: Accessible to signed-in users
