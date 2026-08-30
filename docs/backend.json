@@ -3,54 +3,53 @@
   "entities": {
     "Product": {
       "title": "Product",
-      "description": "A heritage product in the marketplace (Saree, Crochet, or Lehenga).",
+      "description": "A heritage product (Saree, Crochet, etc.)",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "name": { "type": "string" },
         "description": { "type": "string" },
         "price": { "type": "number" },
-        "wholesalePrice": { "type": "number" },
         "stock": { "type": "number" },
-        "sareeImg": { "type": "string", "description": "Original product image URL" },
-        "sareeImgHint": { "type": "string" },
-        "modelImg": { "type": "string", "description": "AI generated lifestyle/model image URL" },
-        "variety": { "type": "string" },
-        "category": { "type": "string", "enum": ["saree", "crochet", "lehenga"] },
-        "likes": { "type": "number" },
-        "shares": { "type": "number" },
-        "ownerId": { "type": "string" }
-      },
-      "required": ["name", "price", "description", "category"]
+        "ownerId": { "type": "string" },
+        "category": { "type": "string" },
+        "isArchived": { "type": "boolean" }
+      }
     },
-    "UserProfile": {
-      "title": "UserProfile",
-      "description": "Information about a user or partner boutique.",
+    "RestockRequest": {
+      "title": "Restock Request",
+      "description": "A request from a user to be notified when a product is back in stock.",
       "type": "object",
       "properties": {
-        "role": { "type": "string", "enum": ["customer", "admin", "wholesaler"] },
-        "email": { "type": "string", "format": "email" },
-        "businessName": { "type": "string" },
-        "bannerUrl": { "type": "string" }
-      },
-      "required": ["role"]
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "notified"] }
+      }
     }
   },
   "auth": {
-    "providers": ["email"]
+    "providers": ["email", "anonymous"]
   },
   "firestore": {
-    "/SareeCollection/{productId}": {
-      "schema": "Product",
-      "description": "Unified collection of all heritage products across all categories."
+    "/SareeCollection/{id}": {
+      "schema": "#/entities/Product",
+      "description": "Main product collection"
     },
-    "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "User profiles and boutique information."
+    "/restockRequests/{id}": {
+      "schema": "#/entities/RestockRequest",
+      "description": "User requests for back-in-stock notifications"
     },
-    "/orders/{orderId}": {
-      "schema": { "type": "object" },
-      "description": "Platform orders and transactions."
+    "/orders/{id}": {
+      "schema": "object",
+      "description": "Order records"
+    },
+    "/users/{id}": {
+      "schema": "object",
+      "description": "User profiles"
     }
   }
 }

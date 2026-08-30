@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -10,10 +11,13 @@ service cloud.firestore {
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares']));
     }
 
+    match /restockRequests/{requestId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin() || request.auth.uid == resource.data.ownerId);
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+    }
+
     match /orders/{orderId} {
-      // FULLY REMOVED RESTRICTIONS
-      // Allowing all reads/writes to prevent the "Missing Permissions" crash.
-      // Privacy is handled by frontend query filters.
       allow read, write: if true;
     }
 

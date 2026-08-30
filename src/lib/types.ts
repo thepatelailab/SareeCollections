@@ -77,3 +77,15 @@ export interface WholesalerRequest {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: any;
 }
+
+export interface RestockRequest {
+  id: string;
+  productId: string;
+  productName: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  ownerId: string;
+  createdAt: any;
+  status: 'pending' | 'notified';
+}

@@ -23,13 +23,16 @@ import {
   getDocs, 
   startAfter,
   DocumentSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  where,
+  addDoc
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes, getStorage, deleteObject } from 'firebase/storage';
 import { useFirestore, useFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import type { Product, UserProfile, ProductCategory } from '@/lib/types';
+import type { Product, UserProfile, ProductCategory, RestockRequest } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { saveProductsToCache, getCachedProducts } from '@/lib/db-persistence';
+import { useToast } from '@/hooks/use-toast';
 
 const ADMIN_EMAIL = 'bp.brpl@gmail.com';
 const PAGE_SIZE = 12;
@@ -59,6 +62,7 @@ interface AppContextType {
   isHeroImageLoading: boolean;
   refetchUserProfile: () => Promise<void>;
   incrementProductMetric: (productId: string, metric: 'likes' | 'shares') => void;
+  submitRestockRequest: (product: Product) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,6 +108,8 @@ async function createThumbnail(fileOrUrl: File | string, maxWidth = 400): Promis
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { firestore, auth } = useFirebase();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
+  
   const [isAdmin, setIsAdmin] = useState(false);
   const [isWholesaler, setIsWholesaler] = useState(false);
   const [isRoleLoaded, setIsRoleLoaded] = useState(false);
@@ -173,7 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const q = query(
           collection(firestore, 'SareeCollection'), 
           orderBy('id', 'desc'), 
-          limit(PAGE_SIZE * 2) // Fetch more to account for archived items
+          limit(PAGE_SIZE * 2) 
         );
         const snap = await getDocs(q);
         const allFetched = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
@@ -286,7 +292,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const docRef = doc(firestore, 'SareeCollection', productId);
     await updateDoc(docRef, { isArchived: shouldArchive });
     
-    // Refresh local list
     if (shouldArchive) {
       setProducts(prev => prev.filter(p => p.id !== productId));
     }
@@ -299,7 +304,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const docRef = doc(firestore, 'SareeCollection', productId);
     
     try {
-      // 1. Delete files from Storage to save costs
       const filePaths = [
         `SareeCollection/${productId}/saree.jpg`,
         `SareeCollection/${productId}/model.jpg`,
@@ -312,15 +316,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await deleteObject(fileRef).catch(() => console.warn(`File already deleted or missing: ${path}`));
       }
 
-      // 2. Delete Firestore Document
       await deleteDoc(docRef);
-
-      // 3. Update local state
       setProducts(prev => prev.filter(p => p.id !== productId));
       
     } catch (e) {
       console.error("Permanent deletion failed", e);
       throw e;
+    }
+  };
+
+  const submitRestockRequest = async (product: Product) => {
+    if (!firestore || !user || user.isAnonymous) return;
+    
+    try {
+      const q = query(
+        collection(firestore, 'restockRequests'),
+        where('productId', '==', product.id),
+        where('userId', '==', user.uid)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        toast({ title: "Already Registered", description: "You are already on the waitlist for this piece." });
+        return;
+      }
+
+      await addDoc(collection(firestore, 'restockRequests'), {
+        productId: product.id,
+        productName: product.name,
+        userId: user.uid,
+        userEmail: user.email,
+        userName: user.displayName || 'Heritage Customer',
+        ownerId: product.ownerId || 'admin',
+        createdAt: serverTimestamp(),
+        status: 'pending'
+      });
+      
+      toast({ title: "Waitlist Registered!", description: "We will notify you the moment this piece is restocked." });
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Request Failed", description: "Could not add to waitlist." });
     }
   };
 
@@ -419,8 +452,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isHeroImageLoading,
       refetchUserProfile: fetchUserProfile,
       incrementProductMetric,
+      submitRestockRequest,
     }),
-    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, deleteProductPermanently, updateHeroImage, fetchUserProfile]
+    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, deleteProductPermanently, updateHeroImage, fetchUserProfile, submitRestockRequest]
   );
 
   return (

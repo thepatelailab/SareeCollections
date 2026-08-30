@@ -4,7 +4,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Share2, Store, Instagram, Copy, CheckCircle2 } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { ShoppingBag, Heart, Share2, Store, Instagram, Bell, CheckCircle2 } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import {
   Card,
@@ -19,6 +20,7 @@ import { useAppContext } from './providers/app-provider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/firebase';
 import {
   Popover,
   PopoverContent,
@@ -43,10 +45,14 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useUser();
   const { addToCart } = useCartContext();
-  const { incrementProductMetric } = useAppContext();
+  const { incrementProductMetric, submitRestockRequest } = useAppContext();
   const [isLiked, setIsLiked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSubmittingNotify, setIsSubmittingNotify] = useState(false);
   const { toast } = useToast();
 
   const productUrl = typeof window !== 'undefined' 
@@ -61,6 +67,21 @@ export function ProductCard({ product }: ProductCardProps) {
     if (!isLiked) {
       setIsLiked(true);
       incrementProductMetric(product.id, 'likes');
+    }
+  };
+
+  const handleNotifyMe = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || user.isAnonymous) {
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    setIsSubmittingNotify(true);
+    try {
+      await submitRestockRequest(product);
+    } finally {
+      setIsSubmittingNotify(false);
     }
   };
 
@@ -79,9 +100,7 @@ export function ProductCard({ product }: ProductCardProps) {
           url: productUrl,
         });
         return;
-      } catch (err) {
-        // Fallback if user cancels or API fails
-      }
+      } catch (err) {}
     }
 
     if (platform === 'whatsapp') {
@@ -89,7 +108,6 @@ export function ProductCard({ product }: ProductCardProps) {
     } else if (platform === 'facebook') {
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`, '_blank');
     } else if (platform === 'instagram') {
-      // Instagram doesn't have a direct link share API, we copy the link and notify user
       navigator.clipboard.writeText(productUrl);
       setCopied(true);
       toast({ title: 'Link Copied!', description: 'Open Instagram to share this heritage piece.' });
@@ -257,19 +275,28 @@ export function ProductCard({ product }: ProductCardProps) {
              <span className="text-[11px] text-muted-foreground line-through opacity-40 font-black">INR {Math.round(product.price * 1.2)}</span>
              <p className="text-2xl font-black text-primary tracking-tight">INR {product.price}</p>
           </div>
-          <Button
-            size="sm"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToCart(product);
-            }}
-            className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
-            aria-label={isOutOfStock ? "Sold Out" : `Add ${product.name} to cart`}
-            disabled={isOutOfStock}
-          >
-            {isOutOfStock ? 'Sold Out' : <><ShoppingBag className="mr-2.5 h-4.5 w-4.5" /> Add to Cart</>}
-          </Button>
+          {isOutOfStock ? (
+            <Button
+              size="sm"
+              onClick={handleNotifyMe}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95"
+              disabled={isSubmittingNotify}
+            >
+              {isSubmittingNotify ? '...' : <><Bell className="mr-2 h-4 w-4" /> Notify</>}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToCart(product);
+              }}
+              className="bg-primary hover:bg-primary/90 text-[10px] h-11 px-6 rounded-full font-black uppercase tracking-widest shadow-xl transition-transform active:scale-95"
+            >
+              <><ShoppingBag className="mr-2.5 h-4.5 w-4.5" /> Buy</>
+            </Button>
+          )}
         </div>
       </div>
     </Card>

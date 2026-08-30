@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,8 +7,9 @@ import { useUser, useFirebase, useStorage } from '@/firebase';
 import { useAppContext } from '@/components/providers/app-provider';
 import { PartnerInventory } from './components/partner-inventory';
 import { PartnerOrders } from './components/partner-orders';
+import { RestockRequests } from './components/restock-requests';
 import { WholesalerAddSareeDialog } from './components/add-saree-dialog';
-import { LayoutDashboard, Store, LogOut, Copy, CheckCircle2, Settings, Loader2, Package } from 'lucide-react';
+import { LayoutDashboard, Store, LogOut, Copy, CheckCircle2, Settings, Loader2, Package, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,7 +36,6 @@ export default function PartnerDashboardPage() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
 
-  // Allow both wholesalers AND admins to access this dashboard
   useEffect(() => {
     if (!isUserLoading && !isWholesaler && !isAdmin) {
       router.push('/');
@@ -88,7 +89,6 @@ export default function PartnerDashboardPage() {
       await setDoc(doc(firestore, 'users', user.uid), {
         businessName: businessName.trim(),
         bannerUrl,
-        // Preserve role or set correctly
         role: isAdmin ? 'admin' : 'wholesaler',
         updatedAt: serverTimestamp()
       }, { merge: true });
@@ -140,12 +140,15 @@ export default function PartnerDashboardPage() {
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[800px] h-14 bg-muted/40 p-1.5 rounded-2xl border">
           <TabsTrigger value="inventory" className="flex items-center gap-2 rounded-xl font-headline text-lg">
             <Store className="h-5 w-5" /> Boutique
           </TabsTrigger>
           <TabsTrigger value="orders" className="flex items-center gap-2 rounded-xl font-headline text-lg">
             <Package className="h-5 w-5" /> Orders
+          </TabsTrigger>
+          <TabsTrigger value="waitlist" className="flex items-center gap-2 rounded-xl font-headline text-lg">
+            <Bell className="h-5 w-5" /> Waitlist
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2 rounded-xl font-headline text-lg">
             <Settings className="h-5 w-5" /> Settings
@@ -158,6 +161,10 @@ export default function PartnerDashboardPage() {
 
         <TabsContent value="orders">
           <PartnerOrders />
+        </TabsContent>
+
+        <TabsContent value="waitlist">
+          <RestockRequests />
         </TabsContent>
 
         <TabsContent value="settings">

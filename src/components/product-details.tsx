@@ -3,7 +3,8 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store, AlertTriangle, Instagram, Copy, CheckCircle2 } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Heart, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, Share2, Store, AlertTriangle, Instagram, Copy, CheckCircle2, Bell } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from './providers/cart-provider';
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/firebase';
 import Link from 'next/link';
 import {
   Popover,
@@ -37,9 +39,13 @@ interface ProductDetailsProps {
 }
 
 export function ProductDetails({ product }: ProductDetailsProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useUser();
   const { addToCart } = useCartContext();
-  const { incrementProductMetric } = useAppContext();
+  const { incrementProductMetric, submitRestockRequest } = useAppContext();
   const [isLiked, setIsLiked] = useState(false);
+  const [isSubmittingNotify, setIsSubmittingNotify] = useState(false);
   const { toast } = useToast();
 
   const productUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -51,6 +57,19 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     if (!isLiked) {
       setIsLiked(true);
       incrementProductMetric(product.id, 'likes');
+    }
+  };
+
+  const handleNotifyMe = async () => {
+    if (!user || user.isAnonymous) {
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    setIsSubmittingNotify(true);
+    try {
+      await submitRestockRequest(product);
+    } finally {
+      setIsSubmittingNotify(false);
     }
   };
 
@@ -91,7 +110,6 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* Visual Showcase */}
         <div className="space-y-6">
           <Tabs defaultValue="model" className="w-full">
             <div className="relative aspect-[4/5] rounded-[2rem] md:rounded-[3rem] overflow-hidden border shadow-2xl bg-muted">
@@ -115,7 +133,6 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 )}
               </div>
 
-              {/* Interaction Overlay */}
               <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-20">
                 <div className="flex gap-3">
                   <Button 
@@ -158,7 +175,6 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                   </Popover>
                 </div>
 
-                {/* Metrics Pill Badge */}
                 <div className="flex items-center gap-4 bg-white/95 backdrop-blur-xl rounded-full px-5 py-2 md:px-7 md:py-3 shadow-xl border border-white/40">
                   <div className="flex items-center gap-2 text-red-500">
                     <Heart className="h-4 w-4 md:h-5 md:w-5 fill-current" />
@@ -179,7 +195,6 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </Tabs>
         </div>
 
-        {/* Product Information */}
         <div className="flex flex-col gap-8 py-4">
           <div className="space-y-4">
             <h1 className="text-4xl md:text-6xl font-headline text-primary mb-2 leading-[1.1]">{product.name}</h1>
@@ -237,21 +252,33 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </div>
 
           <div className="flex flex-col gap-4">
-            <Button 
-              size="lg" 
-              className={cn(
-                "w-full py-8 text-xl md:text-2xl font-headline shadow-2xl rounded-2xl transition-all",
-                isOutOfStock ? "bg-muted text-muted-foreground cursor-not-allowed hover:bg-muted" : "bg-primary hover:bg-primary/90 hover:-translate-y-1 active:scale-95"
-              )}
-              onClick={() => !isOutOfStock && addToCart(product)}
-              disabled={isOutOfStock}
-            >
-              {isOutOfStock ? 'Currently Unavailable' : <><ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Add to Cart</>}
-            </Button>
+            {isOutOfStock ? (
+              <Button 
+                size="lg" 
+                className="w-full py-8 text-xl md:text-2xl font-headline shadow-2xl rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all hover:-translate-y-1 active:scale-95"
+                onClick={handleNotifyMe}
+                disabled={isSubmittingNotify}
+              >
+                {isSubmittingNotify ? 'Registering...' : <><Bell className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Notify Me When Restocked</>}
+              </Button>
+            ) : (
+              <Button 
+                size="lg" 
+                className="w-full py-8 text-xl md:text-2xl font-headline shadow-2xl rounded-2xl bg-primary hover:bg-primary/90 transition-all hover:-translate-y-1 active:scale-95"
+                onClick={() => addToCart(product)}
+              >
+                <ShoppingBag className="mr-3 h-5 w-5 md:h-7 md:w-7" /> Add to Cart
+              </Button>
+            )}
             
             {!isOutOfStock && (
               <p className="text-center text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
                 <span className="text-primary font-black">{product.shares || 0}</span> Global Style Explorers Shared This Piece
+              </p>
+            )}
+            {isOutOfStock && (
+               <p className="text-center text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
+                Join the exclusive waitlist to be alerted first.
               </p>
             )}
           </div>
