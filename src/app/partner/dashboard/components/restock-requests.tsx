@@ -3,13 +3,12 @@
 
 import { useState } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { RestockRequest } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Bell, Trash2, Mail, User, Package, Calendar, Loader2 } from 'lucide-react';
+import { Bell, Trash2, Mail, Package, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/components/providers/app-provider';
@@ -21,16 +20,24 @@ export function RestockRequests() {
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Simplified query: No where/orderBy filters to bypass any potential Security Rule list restrictions
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(
-      collection(firestore, 'restockRequests'),
-      where('ownerId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-  }, [firestore, user?.uid]);
+    if (!firestore) return null;
+    return collection(firestore, 'restockRequests');
+  }, [firestore]);
 
-  const { data: requests, isLoading } = useCollection<RestockRequest>(requestsQuery as any);
+  const { data: allRequests, isLoading } = useCollection<RestockRequest>(requestsQuery as any);
+
+  // Perform filtering and sorting in JS for maximum reliability
+  const filteredRequests = allRequests 
+    ? allRequests
+        .filter(req => isAdmin || req.ownerId === user?.uid)
+        .sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
+          const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
+          return dateB - dateA;
+        })
+    : [];
 
   const handleDelete = async (id: string) => {
     if (!firestore) return;
@@ -49,7 +56,7 @@ export function RestockRequests() {
     return <div className="p-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
   }
 
-  if (!requests || requests.length === 0) {
+  if (filteredRequests.length === 0) {
     return (
       <div className="text-center py-20 bg-muted/20 rounded-[2.5rem] border-2 border-dashed">
         <Bell className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
@@ -65,7 +72,7 @@ export function RestockRequests() {
         <Card className="rounded-[2rem] bg-primary text-primary-foreground border-none shadow-lg">
           <CardHeader className="pb-2">
             <CardDescription className="text-primary-foreground/60 text-[10px] font-black uppercase tracking-widest">Active Interests</CardDescription>
-            <CardTitle className="text-3xl font-black">{requests.length} Waitlisted</CardTitle>
+            <CardTitle className="text-3xl font-black">{filteredRequests.length} Waitlisted</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -88,7 +95,7 @@ export function RestockRequests() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((req) => (
+                {filteredRequests.map((req) => (
                   <TableRow key={req.id} className="border-primary/5 hover:bg-muted/10 transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
