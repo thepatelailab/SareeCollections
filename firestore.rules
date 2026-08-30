@@ -3,55 +3,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // 1. Saree Collection: Public read, restricted write
     match /SareeCollection/{sareeId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() || isWholesaler();
-      allow delete: if isAdmin() || (isWholesaler() && request.auth.uid == resource.data.ownerId);
-      allow update: if isAdmin() || 
-                    (isWholesaler() && request.auth.uid == resource.data.ownerId) ||
-                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares']));
-    }
-
-    match /restockRequests/{requestId} {
-      // Removing restrictions to ensure partners can always view their waitlist
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
-      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
+    // 2. Waitlist (Restock Requests): Open as requested to prioritize partner visibility
+    match /restockRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // 3. Orders: Accessible to signed-in users
     match /orders/{orderId} {
-      // Streamlined order rules
-      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.user_id);
-      allow write: if true; // Temporary broad write for checkout process
+      allow read: if isSignedIn();
+      allow write: if true; // Open for checkout process
     }
 
+    // 4. Partner Applications
     match /wholesalerRequests/{requestId} {
       allow create: if true;
-      allow get, list, update, delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    match /countries/{id} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
+    // 5. Metadata Collections
+    match /countries/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /states/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /sareeVarieties/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
 
-    match /states/{id} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /sareeVarieties/{id} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /settings/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
+    // 6. User Profiles
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
@@ -66,12 +51,6 @@ service cloud.firestore {
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
         );
-    }
-
-    function isWholesaler() {
-        return isSignedIn() && 
-               exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'wholesaler';
     }
   }
 }
