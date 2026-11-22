@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useMemo } from 'react';
 import { ProductGrid } from '@/components/product-grid';
@@ -14,9 +13,11 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link';
 import Image from 'next/image';
-import { Filter, X, LayoutGrid, Flower2, Shirt, ArrowDown, Loader2 } from 'lucide-react';
+import { Filter, X, LayoutGrid, Flower2, Shirt, ArrowDown, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
@@ -26,6 +27,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedVariety, setSelectedVariety] = useState<string>('all');
   const [selectedPartner, setSelectedPartner] = useState<string>('all');
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
 
   const partners = useMemo(() => {
     const pSet = new Set<string>();
@@ -69,81 +71,114 @@ export default function Home() {
       </section>
 
       <div id="collection" className="container mx-auto px-4 py-8 md:py-16">
-        <div className="flex flex-col gap-8 mb-8 md:mb-12 border-b pb-8">
+        <Collapsible 
+          open={isHeaderExpanded} 
+          onOpenChange={setIsHeaderExpanded}
+          className="flex flex-col gap-4 mb-8 md:mb-12 border-b pb-6"
+        >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="w-full">
-              <h2 className="text-2xl md:text-5xl font-headline text-primary lowercase leading-tight">
-                curated heritage collections
-              </h2>
-              <p className="text-sm md:text-base text-muted-foreground mt-2">Discover our highest-rated traditional handlooms and artisan crafts.</p>
+            <div className="w-full relative">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl md:text-5xl font-headline text-primary lowercase leading-tight">
+                  curated heritage collections
+                </h2>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <div className="hidden md:block">
+                      <AddSareeDialog />
+                    </div>
+                  )}
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="rounded-full h-10 px-4 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-widest mr-2">
+                        {isHeaderExpanded ? 'Hide Filters' : 'Explore Filters'}
+                      </span>
+                      {isHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              </div>
+              <p className={cn(
+                "text-sm md:text-base text-muted-foreground mt-2 transition-all",
+                !isHeaderExpanded && "hidden md:block"
+              )}>
+                Discover our highest-rated traditional handlooms and artisan crafts.
+              </p>
             </div>
+          </div>
+
+          <CollapsibleContent className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
             {isAdmin && (
-              <div className="mt-2 md:mt-0 w-full md:w-auto">
+              <div className="md:hidden mb-4">
                 <AddSareeDialog />
               </div>
             )}
-          </div>
-
-          {/* Category Tabs */}
-          <Tabs defaultValue="all" onValueChange={setSelectedCategory} className="w-full overflow-x-auto">
-            <TabsList className="bg-muted/40 p-1 rounded-2xl border border-primary/5 inline-flex min-w-full md:min-w-0">
-              <TabsTrigger value="all" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <LayoutGrid className="h-3.5 w-3.5" /> All Crafts
-              </TabsTrigger>
-              <TabsTrigger value="saree" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Shirt className="h-3.5 w-3.5" /> Sarees
-              </TabsTrigger>
-              <TabsTrigger value="crochet" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Flower2 className="h-3.5 w-3.5" /> Crochet Hub
-              </TabsTrigger>
-              <TabsTrigger value="lehenga" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest">
-                Lehenga
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {/* Filter Bar */}
-          <div className="flex flex-wrap items-center gap-4 bg-white/50 p-4 rounded-3xl border border-primary/5 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/50 mr-2">
-              <Filter className="h-4 w-4" /> Filters
-            </div>
             
-            <Select value={selectedVariety} onValueChange={setSelectedVariety}>
-              <SelectTrigger className="w-full md:w-[200px] h-11 rounded-2xl bg-white border-none shadow-sm text-xs font-bold">
-                <SelectValue placeholder="Textile Variety" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Varieties</SelectItem>
-                {sareeVarieties.map(v => (
-                  <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Category Tabs */}
+            <Tabs defaultValue="all" onValueChange={setSelectedCategory} className="w-full overflow-x-auto">
+              <TabsList className="bg-muted/40 p-1 rounded-2xl border border-primary/5 inline-flex min-w-full md:min-w-0">
+                <TabsTrigger value="all" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <LayoutGrid className="h-3.5 w-3.5" /> All Crafts
+                </TabsTrigger>
+                <TabsTrigger value="saree" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <Shirt className="h-3.5 w-3.5" /> Sarees
+                </TabsTrigger>
+                <TabsTrigger value="crochet" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <Flower2 className="h-3.5 w-3.5" /> Crochet Hub
+                </TabsTrigger>
+                <TabsTrigger value="lehenga" className="rounded-xl px-6 py-2.5 text-[10px] font-black uppercase tracking-widest">
+                  Lehenga
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-            <Select value={selectedPartner} onValueChange={setSelectedPartner}>
-              <SelectTrigger className="w-full md:w-[200px] h-11 rounded-2xl bg-white border-none shadow-sm text-xs font-bold">
-                <SelectValue placeholder="Wholesaler" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Partners</SelectItem>
-                {partners.map(p => (
-                  <SelectItem key={p} value={p}>Partner {p.slice(-4)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-4 bg-white/50 p-4 rounded-3xl border border-primary/5 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/50 mr-2">
+                <Filter className="h-4 w-4" /> Filters
+              </div>
+              
+              <Select value={selectedVariety} onValueChange={setSelectedVariety}>
+                <SelectTrigger className="w-full md:w-[200px] h-11 rounded-2xl bg-white border-none shadow-sm text-xs font-bold">
+                  <SelectValue placeholder="Textile Variety" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Varieties</SelectItem>
+                  {sareeVarieties.map(v => (
+                    <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {(selectedVariety !== 'all' || selectedPartner !== 'all') && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => { setSelectedVariety('all'); setSelectedPartner('all'); }}
-                className="text-[10px] font-black uppercase tracking-widest text-destructive hover:bg-destructive/5"
-              >
-                <X className="h-3 w-3 mr-1" /> Clear
-              </Button>
-            )}
-          </div>
-        </div>
+              <Select value={selectedPartner} onValueChange={setSelectedPartner}>
+                <SelectTrigger className="w-full md:w-[200px] h-11 rounded-2xl bg-white border-none shadow-sm text-xs font-bold">
+                  <SelectValue placeholder="Wholesaler" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Partners</SelectItem>
+                  {partners.map(p => (
+                    <SelectItem key={p} value={p}>Partner {p.slice(-4)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(selectedVariety !== 'all' || selectedPartner !== 'all') && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { setSelectedVariety('all'); setSelectedPartner('all'); }}
+                  className="text-[10px] font-black uppercase tracking-widest text-destructive hover:bg-destructive/5"
+                >
+                  <X className="h-3 w-3 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         
         {isLoading ? (
           <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
