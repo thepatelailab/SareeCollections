@@ -70,13 +70,13 @@ export default function Home() {
         </Link>
       </section>
 
-      <div id="collection" className="container mx-auto px-4 py-8 md:py-16">
+      <div id="collection" className="container mx-auto px-4 py-2 md:py-4">
         <Collapsible 
           open={isHeaderExpanded} 
           onOpenChange={setIsHeaderExpanded}
-          className="flex flex-col gap-4 mb-8 md:mb-12 border-b pb-6"
+          className="flex flex-col gap-2 mb-4 border-b pb-2"
         >
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div className="w-full relative">
               <div className="flex items-center justify-end">
                 <div className="flex items-center gap-2">
@@ -89,12 +89,12 @@ export default function Home() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="rounded-full h-10 px-4 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10"
+                      className="rounded-full h-9 px-4 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10"
                     >
                       <span className="text-[10px] font-black uppercase tracking-widest mr-2">
                         {isHeaderExpanded ? 'Hide Filters' : 'Explore Filters'}
                       </span>
-                      {isHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {isHeaderExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     </Button>
                   </CollapsibleTrigger>
                 </div>
@@ -102,7 +102,7 @@ export default function Home() {
             </div>
           </div>
 
-          <CollapsibleContent className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <CollapsibleContent className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-1 duration-200">
             {isAdmin && (
               <div className="md:hidden mb-4">
                 <AddSareeDialog />
@@ -186,7 +186,7 @@ export default function Home() {
             <p className="text-muted-foreground font-headline text-xl">No products found in this category.</p>
           </div>
         ) : (
-          <div className="space-y-16">
+          <div className="space-y-12">
             <ProductGrid products={filteredProducts} />
             
             {hasMore && (
