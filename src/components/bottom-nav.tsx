@@ -33,7 +33,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-primary/5 px-6 pb-6 pt-3 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-primary/5 px-6 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex items-center justify-between shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
