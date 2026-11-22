@@ -10,7 +10,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Saree Dukan',
+  title: 'My Crochet Hub',
   description: 'An online exclusive Saree store.',
 };
 
