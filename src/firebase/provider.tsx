@@ -50,12 +50,8 @@ export interface UserHookResult {
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-// A WeakMap to track memoized Firestore references/queries without mutating the objects.
 const memoizedRefs = new WeakMap<object, boolean>();
 
-/**
- * FirebaseProvider manages and provides Firebase services and user authentication state.
- */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
   firebaseApp,
@@ -111,8 +107,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 };
 
 /**
- * Hook to access the Firebase context. 
- * Enforces service availability only on the client side to prevent SSR crashes.
+ * Returns the Firebase services and current user state.
+ * During SSR, services will be null, and this is handled gracefully.
  */
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
@@ -120,10 +116,13 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  // Only throw service availability errors on the client.
-  // On the server, we expect these to be null as the SDKs are not initialized for SSR.
-  if (typeof window !== 'undefined' && !context.areServicesAvailable) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
+  // We only enforce service availability on the client side after hydration.
+  // During SSR (Server-Side Rendering), services are expected to be null.
+  const isClient = typeof window !== 'undefined';
+  if (isClient && !context.areServicesAvailable) {
+    // If we are on the client and services are still not available, it indicates
+    // an initialization failure (likely missing environment variables).
+    console.warn('Firebase core services not available. This is expected during early hydration or if config is missing.');
   }
 
   return {
@@ -142,10 +141,6 @@ export const useFirestore = (): Firestore => useFirebase().firestore;
 export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
 export const useStorage = (): FirebaseStorage => useFirebase().storage;
 
-/**
- * Memoizes a Firestore reference or query. 
- * Use this to ensure stability for hooks like useCollection or useDoc.
- */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   const memoized = useMemo(factory, deps);
   useEffect(() => {
@@ -156,9 +151,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   return memoized;
 }
 
-/**
- * Internal check to verify if a reference or query was properly memoized.
- */
 export function isMemoized(obj: any): boolean {
   return !!(obj && typeof obj === 'object' && memoizedRefs.has(obj));
 }

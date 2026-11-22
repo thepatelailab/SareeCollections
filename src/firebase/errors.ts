@@ -25,13 +25,8 @@ interface SecurityRuleRequest {
  * Guarded for SSR and does not rely on top-level Auth imports.
  */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
-  let authObject = null;
-  
-  // We avoid importing getAuth here to prevent Node.js from loading the Auth SDK.
-  // In a real crash, the context of the user is usually already known by the caller.
-  
   return {
-    auth: authObject,
+    auth: null, // Auth info omitted to prevent SSR prototype crashes
     method: context.operation,
     path: `/databases/(default)/documents/${context.path}`,
     resource: context.requestResourceData ? { data: context.requestResourceData } : undefined,
