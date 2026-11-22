@@ -2,14 +2,13 @@
 
 /**
  * @fileOverview Generates an avatar of a model wearing a saree from provided saree components.
- *
- * - generateSareeAvatar - A function that generates the Saree Dukan model preview.
- * - GenerateSareeAvatarInput - The input type for the generateSareeAvatar function.
- * - GenerateSareeAvatarOutput - The return type for the generateSareeAvatar function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+
+// Increase timeout for Vercel
+export const maxDuration = 60;
 
 const GenerateSareeAvatarInputSchema = z.object({
   sareePhotoDataUri: z
@@ -52,7 +51,7 @@ const generateSareeAvatarFlow = ai.defineFlow(
   async input => {
     const promptParts: any[] = [
       { text: "You are a professional fashion image generator for an elite saree boutique. You will create a high-quality fashion catalog image of a model wearing a saree synthesized from the provided material references." },
-      { media: { url: input.sareePhotoDataUri } }, // Reference 1: Main Fabric
+      { media: { url: input.sareePhotoDataUri } }, 
     ];
 
     let fabricContext = "REFERENCE 1 is the PRIMARY FABRIC for the saree's main body and drape.";

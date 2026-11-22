@@ -2,14 +2,13 @@
 
 /**
  * @fileOverview Generates a lifestyle background for handcrafted products (like crochet) while preserving the original item.
- *
- * - generateCrochetLifestyle - A function that handles lifestyle image generation.
- * - GenerateCrochetLifestyleInput - The input type for the function.
- * - GenerateCrochetLifestyleOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+
+// Increase timeout for Vercel
+export const maxDuration = 60;
 
 const GenerateCrochetLifestyleInputSchema = z.object({
   productPhotoDataUri: z

@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview Safe error handling for Firestore permissions.
- * Removed top-level Firebase Auth imports to prevent SSR crashes.
+ * This file is now a pure utility to prevent SSR prototype crashes.
  */
 
 type SecurityRuleContext = {
@@ -22,11 +22,11 @@ interface SecurityRuleRequest {
 
 /**
  * Builds the simulated request object for the error message.
- * Guarded for SSR and does not rely on top-level Auth imports.
+ * Does not rely on Firebase SDK imports to remain SSR-safe.
  */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   return {
-    auth: null, // Auth info omitted to prevent SSR prototype crashes
+    auth: null,
     method: context.operation,
     path: `/databases/(default)/documents/${context.path}`,
     resource: context.requestResourceData ? { data: context.requestResourceData } : undefined,

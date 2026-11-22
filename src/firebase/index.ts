@@ -3,8 +3,6 @@
 /**
  * @fileOverview Firebase Client SDK Initialization.
  * This file is strictly for client-side use. 
- * Imports of service SDKs are kept local to the initialization function 
- * where possible to prevent SSR prototype crashes.
  */
 
 import { firebaseConfig } from '@/firebase/config';
@@ -38,9 +36,9 @@ export function initializeFirebase(): FirebaseSdks {
     }
   }
 
-  // CRITICAL: Only initialize services on the client to avoid SSR crashes
-  // We use dynamic require here to ensure these libraries are only loaded in the browser context
+  // CRITICAL: Only initialize services on the client to avoid SSR crashes (prototype error)
   if (typeof window !== 'undefined') {
+    // Dynamic requires to ensure these modules are not parsed on the server
     const { getAuth } = require('firebase/auth');
     const { getFirestore } = require('firebase/firestore');
     const { getStorage } = require('firebase/storage');
@@ -62,13 +60,3 @@ export function initializeFirebase(): FirebaseSdks {
 
   return sdkCache;
 }
-
-// Export providers and hooks directly to avoid massive barrel imports in server components
-export * from './provider';
-export * from './client-provider';
-export * from './firestore/use-collection';
-export * from './firestore/use-doc';
-export * from './non-blocking-updates';
-export * from './non-blocking-login';
-export * from './errors';
-export * from './error-emitter';
