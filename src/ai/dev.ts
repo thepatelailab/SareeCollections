@@ -1,6 +1,8 @@
-'use client';
-import { config } from 'dotenv';
-config();
+/**
+ * @fileOverview Genkit development entry point.
+ * This file is used by the Genkit CLI (genkit start) to register flows.
+ * It is NOT intended to be bundled for the browser.
+ */
 
 import '@/ai/flows/generate-saree-avatar.ts';
 import '@/ai/flows/refine-generated-avatar.ts';
