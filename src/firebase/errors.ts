@@ -1,5 +1,9 @@
 'use client';
-import { getAuth, type User } from 'firebase/auth';
+
+/**
+ * @fileOverview Safe error handling for Firestore permissions.
+ * Removed top-level Firebase Auth imports to prevent SSR crashes.
+ */
 
 type SecurityRuleContext = {
   path: string;
@@ -7,26 +11,8 @@ type SecurityRuleContext = {
   requestResourceData?: any;
 };
 
-interface FirebaseAuthToken {
-  name: string | null;
-  email: string | null;
-  email_verified: boolean;
-  phone_number: string | null;
-  sub: string;
-  firebase: {
-    identities: Record<string, string[]>;
-    sign_in_provider: string;
-    tenant: string | null;
-  };
-}
-
-interface FirebaseAuthObject {
-  uid: string;
-  token: FirebaseAuthToken;
-}
-
 interface SecurityRuleRequest {
-  auth: FirebaseAuthObject | null;
+  auth: any | null;
   method: string;
   path: string;
   resource?: {
@@ -35,57 +21,15 @@ interface SecurityRuleRequest {
 }
 
 /**
- * Builds a security-rule-compliant auth object from the Firebase User.
- */
-function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
-  if (!currentUser) {
-    return null;
-  }
-
-  const token: FirebaseAuthToken = {
-    name: currentUser.displayName,
-    email: currentUser.email,
-    email_verified: currentUser.emailVerified,
-    phone_number: currentUser.phoneNumber,
-    sub: currentUser.uid,
-    firebase: {
-      identities: currentUser.providerData.reduce((acc, p) => {
-        if (p.providerId) {
-          acc[p.providerId] = [p.uid];
-        }
-        return acc;
-      }, {} as Record<string, string[]>),
-      sign_in_provider: currentUser.providerData[0]?.providerId || 'custom',
-      tenant: currentUser.tenantId,
-    },
-  };
-
-  return {
-    uid: currentUser.uid,
-    token: token,
-  };
-}
-
-/**
- * Builds the complete, simulated request object for the error message.
- * Guarded for SSR to avoid calling getAuth() on the server.
+ * Builds the simulated request object for the error message.
+ * Guarded for SSR and does not rely on top-level Auth imports.
  */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
-  let authObject: FirebaseAuthObject | null = null;
+  let authObject = null;
   
-  // Only attempt to get Auth state on the client
-  if (typeof window !== 'undefined') {
-    try {
-      const firebaseAuth = getAuth();
-      const currentUser = firebaseAuth.currentUser;
-      if (currentUser) {
-        authObject = buildAuthObject(currentUser);
-      }
-    } catch {
-      // Proceed without auth information if Firebase is not yet ready
-    }
-  }
-
+  // We avoid importing getAuth here to prevent Node.js from loading the Auth SDK.
+  // In a real crash, the context of the user is usually already known by the caller.
+  
   return {
     auth: authObject,
     method: context.operation,
