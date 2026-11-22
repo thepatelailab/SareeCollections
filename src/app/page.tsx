@@ -78,10 +78,7 @@ export default function Home() {
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="w-full relative">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl md:text-5xl font-headline text-primary lowercase leading-tight">
-                  curated heritage collections
-                </h2>
+              <div className="flex items-center justify-end">
                 <div className="flex items-center gap-2">
                   {isAdmin && (
                     <div className="hidden md:block">
@@ -102,12 +99,6 @@ export default function Home() {
                   </CollapsibleTrigger>
                 </div>
               </div>
-              <p className={cn(
-                "text-sm md:text-base text-muted-foreground mt-2 transition-all",
-                !isHeaderExpanded && "hidden md:block"
-              )}>
-                Discover our highest-rated traditional handlooms and artisan crafts.
-              </p>
             </div>
           </div>
 
