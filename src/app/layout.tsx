@@ -6,7 +6,7 @@ import { Header } from '@/components/header';
 import { BottomNav } from '@/components/bottom-nav';
 import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -43,7 +43,6 @@ export default function RootLayout({
                 <Footer />
               </div>
               
-              {/* Moved outside main div to ensure clean fixed positioning relative to viewport */}
               <BottomNav />
               
               <Toaster />

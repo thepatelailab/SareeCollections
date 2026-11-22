@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
+import type {
   Query,
-  onSnapshot,
   DocumentData,
   FirestoreError,
   QuerySnapshot,
@@ -31,11 +30,10 @@ export function useCollection<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   
-  // Track the current subscription to prevent race conditions and IDB/SDK sync crashes (ca9)
   const subscriptionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    if (!memoizedTargetRefOrQuery || typeof window === 'undefined') {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -43,9 +41,8 @@ export function useCollection<T = any>(
       return;
     }
 
-    // DX Verification: Non-memoized queries are the #1 cause of ca9 assertion failures
     if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedTargetRefOrQuery)) {
-      console.warn('useCollection: memoizedTargetRefOrQuery was not properly memoized. This can trigger infinite loops and SDK assertion errors (ca9).');
+      console.warn('useCollection: memoizedTargetRefOrQuery was not properly memoized.');
     }
 
     const currentSubId = Math.random().toString(36).substring(7);
@@ -54,11 +51,12 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // Dynamic require prevents evaluation during SSR
+    const { onSnapshot } = require('firebase/firestore');
+
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        // CRITICAL: Immediately ignore if this is no longer the active listener
-        // This prevents the ca9 assertion error during unmounts/re-renders
         if (subscriptionRef.current !== currentSubId) return;
 
         const results: WithId<T>[] = snapshot.docs.map(doc => ({
@@ -71,12 +69,9 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       async (serverError: FirestoreError) => {
-        // CRITICAL: Immediately ignore if this is no longer the active listener
         if (subscriptionRef.current !== currentSubId) return;
 
-        const path = (memoizedTargetRefOrQuery as any).path || 
-                     (memoizedTargetRefOrQuery as any)._query?.path?.segments?.join('/') || 
-                     'query';
+        const path = (memoizedTargetRefOrQuery as any).path || 'query';
 
         const permissionError = new FirestorePermissionError({
           operation: 'list',
@@ -86,14 +81,11 @@ export function useCollection<T = any>(
         setError(permissionError);
         setData(null);
         setIsLoading(false);
-        
-        // Emit only if the component is still interested in this specific query
         errorEmitter.emit('permission-error', permissionError);
       }
     );
 
     return () => {
-      // Mark as inactive immediately on cleanup to stop processing incoming chunks
       subscriptionRef.current = null;
       unsubscribe();
     };

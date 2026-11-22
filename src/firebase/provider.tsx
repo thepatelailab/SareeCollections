@@ -66,11 +66,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    if (!auth) {
+    // Only run authentication listeners in the browser
+    if (!auth || typeof window === 'undefined') {
       setUserAuthState({ user: null, isUserLoading: false, userError: null });
       return;
     }
 
+    // Dynamic require prevents the Auth SDK from being evaluated on the server
     const { onAuthStateChanged } = require('firebase/auth');
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -78,7 +80,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error: any) => {
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );

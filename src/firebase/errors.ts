@@ -22,7 +22,6 @@ interface SecurityRuleRequest {
 
 /**
  * Builds the simulated request object for the error message.
- * Does not rely on Firebase SDK imports to remain SSR-safe.
  */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   return {

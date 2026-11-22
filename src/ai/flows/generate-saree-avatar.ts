@@ -7,9 +7,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-// Increase timeout for Vercel
-export const maxDuration = 60;
-
 const GenerateSareeAvatarInputSchema = z.object({
   sareePhotoDataUri: z
     .string()

@@ -1,9 +1,16 @@
 'use client';
 
 /**
- * @fileOverview Firebase Client SDK Initialization.
- * This file is strictly for client-side use. 
+ * @fileOverview Firebase Client SDK Initialization barrel file.
+ * This file is strictly for client-side use but safe for SSR evaluation.
  */
+
+export * from './provider';
+export * from './firestore/use-collection';
+export * from './firestore/use-doc';
+export * from './errors';
+export * from './error-emitter';
+export * from './client-provider';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -38,7 +45,7 @@ export function initializeFirebase(): FirebaseSdks {
 
   // CRITICAL: Only initialize services on the client to avoid SSR crashes (prototype error)
   if (typeof window !== 'undefined') {
-    // Dynamic requires to ensure these modules are not parsed on the server
+    // Dynamic requires to ensure these modules are not evaluated on the server
     const { getAuth } = require('firebase/auth');
     const { getFirestore } = require('firebase/firestore');
     const { getStorage } = require('firebase/storage');

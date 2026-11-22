@@ -11,8 +11,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const maxDuration = 60;
-
 const RefineGeneratedAvatarInputSchema = z.object({
   initialImage: z
     .string()

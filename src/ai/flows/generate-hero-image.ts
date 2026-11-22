@@ -11,8 +11,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const maxDuration = 60;
-
 const GenerateHeroImageInputSchema = z.object({
   prompt: z.string().describe('The text prompt to generate the image from.'),
 });

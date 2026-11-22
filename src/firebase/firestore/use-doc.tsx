@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
+import type {
   DocumentReference,
-  onSnapshot,
   DocumentData,
   FirestoreError,
   DocumentSnapshot,
@@ -33,7 +32,7 @@ export function useDoc<T = any>(
   const subscriptionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!memoizedDocRef) {
+    if (!memoizedDocRef || typeof window === 'undefined') {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -42,7 +41,7 @@ export function useDoc<T = any>(
     }
 
     if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedDocRef)) {
-      console.warn('useDoc: memoizedDocRef was not properly memoized. This can trigger SDK assertion errors (ca9).');
+      console.warn('useDoc: memoizedDocRef was not properly memoized.');
     }
 
     const currentSubId = Math.random().toString(36).substring(7);
@@ -50,6 +49,9 @@ export function useDoc<T = any>(
 
     setIsLoading(true);
     setError(null);
+
+    // Dynamic require prevents evaluation during SSR
+    const { onSnapshot } = require('firebase/firestore');
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
