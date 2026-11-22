@@ -8,7 +8,7 @@ export function Logo() {
       className="flex items-center transition-all hover:opacity-90 active:scale-95"
     >
       <Image 
-        src="/SareeDukan.png" 
+        src="/SareeDukan.png?v=1.1" 
         alt="SareeDukan.Com Logo" 
         width={400} 
         height={133} 
