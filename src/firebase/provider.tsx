@@ -72,22 +72,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    // Dynamic require prevents the Auth SDK from being evaluated on the server
-    const { onAuthStateChanged } = require('firebase/auth');
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (firebaseUser: User | null) => {
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-      },
-      (error: any) => {
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      }
-    );
-    return () => unsubscribe();
+    try {
+      // Dynamic require ensures side-effects run before we use the auth instance
+      const { onAuthStateChanged } = require('firebase/auth');
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        (firebaseUser: User | null) => {
+          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        },
+        (error: any) => {
+          setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        }
+      );
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn("Auth state listener failed to initialize:", e);
+      setUserAuthState({ user: null, isUserLoading: false, userError: null });
+    }
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
+    const isBrowser = typeof window !== 'undefined';
+    // areServicesAvailable is primarily used for developer debugging and feature-gating
+    const servicesAvailable = isBrowser && !!(firebaseApp && firestore && auth && storage);
+    
     return {
       areServicesAvailable: servicesAvailable,
       firebaseApp,
