@@ -73,7 +73,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     }
 
     try {
-      // Dynamic require ensures side-effects run before we use the auth instance
       const { onAuthStateChanged } = require('firebase/auth');
       const unsubscribe = onAuthStateChanged(
         auth,
@@ -93,7 +92,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   const contextValue = useMemo((): FirebaseContextState => {
     const isBrowser = typeof window !== 'undefined';
-    // areServicesAvailable is primarily used for developer debugging and feature-gating
     const servicesAvailable = isBrowser && !!(firebaseApp && firestore && auth && storage);
     
     return {
@@ -124,10 +122,22 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   return context;
 };
 
-export const useAuth = (): Auth | null => useFirebase().auth;
-export const useFirestore = (): Firestore | null => useFirebase().firestore;
-export const useFirebaseApp = (): FirebaseApp | null => useFirebase().firebaseApp;
-export const useStorage = (): FirebaseStorage | null => useFirebase().storage;
+export const useAuth = (): Auth | null => {
+  const ctx = useContext(FirebaseContext);
+  return ctx?.auth || null;
+};
+export const useFirestore = (): Firestore | null => {
+  const ctx = useContext(FirebaseContext);
+  return ctx?.firestore || null;
+};
+export const useFirebaseApp = (): FirebaseApp | null => {
+  const ctx = useContext(FirebaseContext);
+  return ctx?.firebaseApp || null;
+};
+export const useStorage = (): FirebaseStorage | null => {
+  const ctx = useContext(FirebaseContext);
+  return ctx?.storage || null;
+};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   const memoized = useMemo(factory, deps);
