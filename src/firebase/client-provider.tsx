@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, type ReactNode } from 'react';
@@ -18,11 +19,10 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
 
   useEffect(() => {
     setIsMounted(true);
-    // Initialize Firebase only once in the browser
     initializeFirebase().then(setSdks);
   }, []);
 
-  // Prevent SSR evaluation of Firebase-dependent children
+  // Prevent ANY rendering of children until Firebase is ready on the client
   if (!isMounted || !sdks) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

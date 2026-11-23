@@ -26,10 +26,7 @@ export async function initializeFirebase(): Promise<FirebaseSdks | null> {
   if (sdkCache) return sdkCache;
 
   try {
-    // Dynamic imports prevent server-side evaluation of Firebase packages
     const { initializeApp, getApps, getApp } = await import('firebase/app');
-    
-    // We use standard dynamic imports but we must ensure side-effects are loaded
     const { getAuth } = await import('firebase/auth');
     const { getFirestore } = await import('firebase/firestore');
     const { getStorage } = await import('firebase/storage');

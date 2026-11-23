@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -9,7 +10,7 @@ import React, {
   useCallback,
 } from 'react';
 import { useUser, useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import type { Product, UserProfile, RestockRequest } from '@/lib/types';
+import type { Product, UserProfile } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { saveProductsToCache, getCachedProducts } from '@/lib/db-persistence';
 import { useToast } from '@/hooks/use-toast';
@@ -236,7 +237,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const settingsRef = doc(firestore, 'settings', 'hero');
       const docSnap = await getDoc(settingsRef);
       if (docSnap.exists()) {
-        setHeroImageUrl(docSnap.data().imageUrl || null);
+        const url = docSnap.data().imageUrl;
+        setHeroImageUrl(url && url.trim() !== '' ? url : null);
       } else {
         setHeroImageUrl(null);
       }
@@ -261,35 +263,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const incrementProductMetric = async (productId: string, metric: 'likes' | 'shares') => {
     if (!firestore) return;
-    const { doc, updateDoc, increment } = await import('firebase/firestore');
-    const docRef = doc(firestore, 'SareeCollection', productId);
-    updateDoc(docRef, { [metric]: increment(1) }).catch(e => {});
-    setProducts(prev => {
-      return prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
-    });
+    try {
+      const { doc, updateDoc, increment } = await import('firebase/firestore');
+      const docRef = doc(firestore, 'SareeCollection', productId);
+      await updateDoc(docRef, { [metric]: increment(1) });
+      setProducts(prev => {
+        return prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
+      });
+    } catch (e) {}
   };
 
   const archiveProduct = async (productId: string, shouldArchive: boolean) => {
     if (!firestore) return;
-    const { doc, updateDoc } = await import('firebase/firestore');
-    const docRef = doc(firestore, 'SareeCollection', productId);
-    await updateDoc(docRef, { isArchived: shouldArchive });
-    
-    if (shouldArchive) {
-      setProducts(prev => prev.filter(p => p.id !== productId));
-    }
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const docRef = doc(firestore, 'SareeCollection', productId);
+      await updateDoc(docRef, { isArchived: shouldArchive });
+      
+      if (shouldArchive) {
+        setProducts(prev => prev.filter(p => p.id !== productId));
+      }
+    } catch (e) {}
   };
 
   const deleteProductPermanently = async (productId: string) => {
     if (!firestore || !auth?.currentUser) return;
     
-    const { getStorage, ref, deleteObject } = await import('firebase/storage');
-    const { doc, deleteDoc } = await import('firebase/firestore');
-    
-    const storage = getStorage();
-    const docRef = doc(firestore, 'SareeCollection', productId);
-    
     try {
+      const { getStorage, ref, deleteObject } = await import('firebase/storage');
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      
+      const storage = getStorage();
+      const docRef = doc(firestore, 'SareeCollection', productId);
+      
       const filePaths = [
         `SareeCollection/${productId}/saree.jpg`,
         `SareeCollection/${productId}/model.jpg`,
@@ -345,70 +351,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
     if (!firestore || !auth?.currentUser) throw new Error("Access denied.");
 
-    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    const { doc, collection, setDoc, serverTimestamp } = await import('firebase/firestore');
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const { doc, collection, setDoc, serverTimestamp } = await import('firebase/firestore');
 
-    const storage = getStorage();
-    const newDocRef = doc(collection(firestore, 'SareeCollection'));
-    const productId = newDocRef.id;
+      const storage = getStorage();
+      const newDocRef = doc(collection(firestore, 'SareeCollection'));
+      const productId = newDocRef.id;
 
-    const sareeImageRef = ref(storage, `SareeCollection/${productId}/saree.jpg`);
-    const modelImageRef = ref(storage, `SareeCollection/${productId}/model.jpg`);
-    const thumbSareeRef = ref(storage, `SareeCollection/${productId}/thumb_saree.jpg`);
-    const thumbModelRef = ref(storage, `SareeCollection/${productId}/thumb_model.jpg`);
+      const sareeImageRef = ref(storage, `SareeCollection/${productId}/saree.jpg`);
+      const modelImageRef = ref(storage, `SareeCollection/${productId}/model.jpg`);
+      const thumbSareeRef = ref(storage, `SareeCollection/${productId}/thumb_saree.jpg`);
+      const thumbModelRef = ref(storage, `SareeCollection/${productId}/thumb_model.jpg`);
 
-    const sareeThumbBlob = await createThumbnail(newProductData.sareeImageFile);
-    const modelThumbBlob = await createThumbnail(newProductData.modelImageDataUrl);
+      const sareeThumbBlob = await createThumbnail(newProductData.sareeImageFile);
+      const modelThumbBlob = await createThumbnail(newProductData.modelImageDataUrl);
 
-    const sareeUploadSnapshot = await uploadBytes(sareeImageRef, newProductData.sareeImageFile);
-    const sareeImgUrl = await getDownloadURL(sareeUploadSnapshot.ref);
+      const sareeUploadSnapshot = await uploadBytes(sareeImageRef, newProductData.sareeImageFile);
+      const sareeImgUrl = await getDownloadURL(sareeUploadSnapshot.ref);
 
-    const modelImageResponse = await fetch(newProductData.modelImageDataUrl);
-    const modelImageBlob = await modelImageResponse.blob();
-    const modelUploadSnapshot = await uploadBytes(modelImageRef, modelImageBlob);
-    const modelImgUrl = await getDownloadURL(modelUploadSnapshot.ref);
+      const modelImageResponse = await fetch(newProductData.modelImageDataUrl);
+      const modelImageBlob = await modelImageResponse.blob();
+      const modelUploadSnapshot = await uploadBytes(modelImageRef, modelImageBlob);
+      const modelImgUrl = await getDownloadURL(modelUploadSnapshot.ref);
 
-    const thumbSareeSnap = await uploadBytes(thumbSareeRef, sareeThumbBlob);
-    const thumbSareeUrl = await getDownloadURL(thumbSareeSnap.ref);
+      const thumbSareeSnap = await uploadBytes(thumbSareeRef, sareeThumbBlob);
+      const thumbSareeUrl = await getDownloadURL(thumbSareeSnap.ref);
 
-    const thumbModelSnap = await uploadBytes(thumbModelRef, modelThumbBlob);
-    const thumbModelUrl = await getDownloadURL(thumbModelSnap.ref);
-    
-    const { sareeImageFile: _, modelImageDataUrl: __, ...restOfProductData } = newProductData;
+      const thumbModelSnap = await uploadBytes(thumbModelRef, modelThumbBlob);
+      const thumbModelUrl = await getDownloadURL(thumbModelSnap.ref);
+      
+      const { sareeImageFile: _, modelImageDataUrl: __, ...restOfProductData } = newProductData;
 
-    const finalProduct: Product = {
-      id: productId,
-      ...restOfProductData,
-      sareeImg: sareeImgUrl,
-      modelImg: modelImgUrl,
-      thumbnailImg: thumbSareeUrl,
-      thumbnailModelImg: thumbModelUrl,
-      likes: 0,
-      shares: 0,
-      ownerId: auth.currentUser.uid,
-      updatedAt: serverTimestamp(),
-      isArchived: false,
-    };
-    
-    await setDoc(newDocRef, finalProduct);
-    setProducts(prev => [finalProduct, ...prev]);
-    saveProductsToCache([finalProduct]);
+      const finalProduct: Product = {
+        id: productId,
+        ...restOfProductData,
+        sareeImg: sareeImgUrl,
+        modelImg: modelImgUrl,
+        thumbnailImg: thumbSareeUrl,
+        thumbnailModelImg: thumbModelUrl,
+        likes: 0,
+        shares: 0,
+        ownerId: auth.currentUser.uid,
+        updatedAt: serverTimestamp(),
+        isArchived: false,
+      };
+      
+      await setDoc(newDocRef, finalProduct);
+      setProducts(prev => [finalProduct, ...prev]);
+      saveProductsToCache([finalProduct]);
+    } catch (e) {
+      throw e;
+    }
   };
   
   const updateHeroImage = async (image: File | Blob) => {
      if (!firestore || !isAdmin) throw new Error("Access denied.");
-     const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-     const { doc, setDoc } = await import('firebase/firestore');
+     
+     try {
+       const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+       const { doc, setDoc } = await import('firebase/firestore');
 
-    const storage = getStorage();
-    const imageRef = ref(storage, 'settings/hero-image.jpg');
+       const storage = getStorage();
+       const imageRef = ref(storage, 'settings/hero-image.jpg');
 
-    try {
-        const uploadSnapshot = await uploadBytes(imageRef, image);
-        const imageUrl = await getDownloadURL(uploadSnapshot.ref);
-        const settingsRef = doc(firestore, 'settings', 'hero');
-        await setDoc(settingsRef, { imageUrl }, { merge: true });
-        setHeroImageUrl(imageUrl); 
+       const uploadSnapshot = await uploadBytes(imageRef, image);
+       const imageUrl = await getDownloadURL(uploadSnapshot.ref);
+       const settingsRef = doc(firestore, 'settings', 'hero');
+       await setDoc(settingsRef, { imageUrl }, { merge: true });
+       setHeroImageUrl(imageUrl); 
     } catch (serverError: any) {
         const error = new FirestorePermissionError({
             path: 'settings/hero',

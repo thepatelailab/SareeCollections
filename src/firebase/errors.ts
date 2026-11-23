@@ -45,7 +45,7 @@ export class FirestorePermissionError extends Error {
     this.name = 'FirebaseError';
     this.request = requestObject;
     
-    // Ensure correct prototype chain
+    // Ensure correct prototype chain for non-standard environments
     Object.setPrototypeOf(this, FirestorePermissionError.prototype);
   }
 }
