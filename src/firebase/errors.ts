@@ -1,9 +1,10 @@
+
 'use client';
 
 /**
  * @fileOverview Pure TypeScript error class for Firestore permissions.
- * This file contains NO imports from the Firebase SDK to prevent prototype 
- * crashes during server-side evaluation in environments like Vercel.
+ * CRITICAL: This file contains NO imports from any Firebase SDK to prevent 
+ * Vercel prototype crashes during server-side evaluation.
  */
 
 export type SecurityRuleContext = {

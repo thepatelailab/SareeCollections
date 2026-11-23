@@ -1,11 +1,12 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 
 /**
  * @fileOverview Safe Firebase initialization for Next.js 15.
- * Uses dynamic imports to prevent the SDK from being evaluated on the server,
- * which causes the "prototype of undefined" error in Node.js/Vercel environments.
+ * This pattern ensures that Firebase service SDKs are ONLY loaded in the browser.
+ * Loading them on the server causes a "TypeError: ... prototype of undefined" crash.
  */
 
 export interface FirebaseSdks {
@@ -25,7 +26,10 @@ export async function initializeFirebase(): Promise<FirebaseSdks | null> {
   if (sdkCache) return sdkCache;
 
   try {
+    // Dynamic imports prevent server-side evaluation of Firebase packages
     const { initializeApp, getApps, getApp } = await import('firebase/app');
+    
+    // We use standard dynamic imports but we must ensure side-effects are loaded
     const { getAuth } = await import('firebase/auth');
     const { getFirestore } = await import('firebase/firestore');
     const { getStorage } = await import('firebase/storage');
