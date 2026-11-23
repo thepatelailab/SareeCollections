@@ -20,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 import { sendOrderEmails } from '@/app/actions/email-actions';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -62,9 +61,7 @@ export function CheckoutForm() {
             setDiscoveredKey(data.configuration.public_key);
           }
         }
-      } catch (err) {
-        console.warn('API Config discovery failed.');
-      }
+      } catch (err) {}
     };
     fetchConfig();
   }, []);
@@ -83,30 +80,24 @@ export function CheckoutForm() {
 
   const checkStockAvailability = async () => {
     if (!firestore) return true;
+    const { doc, getDoc } = await import('firebase/firestore');
     
     const outOfStockItems: string[] = [];
-    
     try {
       for (const item of cartItems) {
         const productRef = doc(firestore, 'SareeCollection', item.id);
         const productSnap = await getDoc(productRef);
-        
         if (productSnap.exists()) {
           const currentStock = productSnap.data().stock ?? 0;
-          if (currentStock <= 0) {
-            outOfStockItems.push(item.name);
-          }
+          if (currentStock <= 0) outOfStockItems.push(item.name);
         }
       }
-    } catch (e) {
-      console.warn("Stock verification check bypassed due to connectivity.");
-    }
+    } catch (e) {}
     
     if (outOfStockItems.length > 0) {
-      setError(`Sorry, the following items are currently out of stock: ${outOfStockItems.join(', ')}. Please remove them from your cart to proceed.`);
+      setError(`Sorry, the following items are currently out of stock: ${outOfStockItems.join(', ')}.`);
       return false;
     }
-    
     return true;
   };
 
@@ -114,12 +105,12 @@ export function CheckoutForm() {
     const activeKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || discoveredKey;
 
     if (!activeKey) {
-      setError("Razorpay Configuration Missing.");
+      setError("Payment system initializing...");
       return;
     }
 
     if (!window.Razorpay) {
-      toast({ variant: 'destructive', title: 'Payment Error', description: 'SDK not loaded.' });
+      toast({ variant: 'destructive', title: 'Payment SDK Loading...' });
       return;
     }
 
@@ -144,18 +135,10 @@ export function CheckoutForm() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Failed to create order' }));
-        let detailMsg = 'Failed to create order';
-        if (typeof errorData.detail === 'string') {
-          detailMsg = errorData.detail;
-        } else if (Array.isArray(errorData.detail)) {
-          detailMsg = errorData.detail[0]?.msg || JSON.stringify(errorData.detail);
-        }
-        throw new Error(detailMsg);
-      }
+      if (!response.ok) throw new Error("Order creation failed.");
 
       const order = await response.json();
+      const { doc, updateDoc, getDoc } = await import('firebase/firestore');
 
       const options = {
         key: activeKey,
@@ -166,9 +149,8 @@ export function CheckoutForm() {
         handler: async function () {
           if (firestore) {
              const orderRef = doc(firestore, 'orders', order.id);
-             // Capture the best available image for the order history thumbnail
              await updateDoc(orderRef, {
-                status: 'paid', // Update status to paid immediately for better UX
+                status: 'paid',
                 items: cartItems.map(i => ({
                   id: i.id,
                   name: i.name,
@@ -179,7 +161,7 @@ export function CheckoutForm() {
                 })),
                 shipping_details: formData,
                 updated_at: new Date()
-             }).catch(e => console.error("Order sync failed", e));
+             }).catch(() => {});
 
              const settings = await getDoc(doc(firestore, 'settings', 'email'));
              const senderEmail = settings.exists() ? settings.data().verifiedEmail : 'onboarding@resend.dev';
@@ -195,7 +177,7 @@ export function CheckoutForm() {
              });
           }
 
-          toast({ title: 'Success!', description: 'Order confirmed and details synced.' });
+          toast({ title: 'Success!', description: 'Order confirmed.' });
           clearCart();
           router.push(`/order-success?orderId=${order.id}`);
         },
@@ -224,7 +206,7 @@ export function CheckoutForm() {
         </CardHeader>
         <CardContent className="p-8">
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold animate-in fade-in slide-in-from-top-1">
+            <div className="mb-6 p-4 bg-destructive/10 text-destructive rounded-xl flex items-start gap-3 text-sm font-bold">
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
               <p>{error}</p>
             </div>
@@ -258,7 +240,7 @@ export function CheckoutForm() {
               <div className="bg-muted/30 p-6 rounded-3xl flex justify-between items-center mt-8">
                 <div className="text-3xl font-black text-primary">INR {cartTotal.toFixed(2)}</div>
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
-                  <ShieldCheck className="h-4 w-4" /> Secure via Razorpay
+                  <ShieldCheck className="h-4 w-4" /> Secure Payment
                 </div>
               </div>
 
@@ -266,6 +248,7 @@ export function CheckoutForm() {
                 type="submit" 
                 className="w-full py-8 text-xl font-headline bg-primary rounded-2xl shadow-xl" 
                 disabled={isProcessing}
+                suppressHydrationWarning
               >
                 {isProcessing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <><CreditCard className="mr-2 h-6 w-6" /> Place Order</>}
               </Button>

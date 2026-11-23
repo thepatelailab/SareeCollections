@@ -1,30 +1,27 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  onSnapshot,
-  type DocumentReference,
-  type DocumentData,
-  type FirestoreError,
-} from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { isMemoized } from '@/firebase/provider';
 
 type WithId<T> = T & { id: string };
 
 export interface UseDocResult<T> {
   data: WithId<T> | null;
   isLoading: boolean;
-  error: FirestoreError | Error | null;
+  error: any;
 }
 
+/**
+ * A safe hook for Firestore documents that dynamically imports SDK functions
+ * to prevent SSR crashes.
+ */
 export function useDoc<T = any>(
-  memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  memoizedDocRef: any,
 ): UseDocResult<T> {
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [error, setError] = useState<any>(null);
   
   const subscriptionRef = useRef<string | null>(null);
 
@@ -32,13 +29,7 @@ export function useDoc<T = any>(
     if (!memoizedDocRef || typeof window === 'undefined') {
       setData(null);
       setIsLoading(false);
-      setError(null);
-      subscriptionRef.current = null;
       return;
-    }
-
-    if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedDocRef)) {
-      console.warn('useDoc: memoizedDocRef was not properly memoized.');
     }
 
     const currentSubId = Math.random().toString(36).substring(7);
@@ -47,33 +38,39 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
 
-    const unsubscribe = onSnapshot(
-      memoizedDocRef,
-      (snapshot) => {
-        if (subscriptionRef.current !== currentSubId) return;
+    let unsubscribe: () => void = () => {};
 
-        if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
-        } else {
+    import('firebase/firestore').then(({ onSnapshot }) => {
+      if (subscriptionRef.current !== currentSubId) return;
+
+      unsubscribe = onSnapshot(
+        memoizedDocRef,
+        (snapshot) => {
+          if (subscriptionRef.current !== currentSubId) return;
+
+          if (snapshot.exists()) {
+            setData({ ...(snapshot.data() as T), id: snapshot.id });
+          } else {
+            setData(null);
+          }
+          setError(null);
+          setIsLoading(false);
+        },
+        (serverError) => {
+          if (subscriptionRef.current !== currentSubId) return;
+
+          const contextualError = new FirestorePermissionError({
+            operation: 'get',
+            path: memoizedDocRef.path || 'document',
+          });
+
+          setError(contextualError);
           setData(null);
+          setIsLoading(false);
+          errorEmitter.emit('permission-error', contextualError);
         }
-        setError(null);
-        setIsLoading(false);
-      },
-      (serverError) => {
-        if (subscriptionRef.current !== currentSubId) return;
-
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        });
-
-        setError(contextualError);
-        setData(null);
-        setIsLoading(false);
-        errorEmitter.emit('permission-error', contextualError);
-      }
-    );
+      );
+    });
 
     return () => {
       subscriptionRef.current = null;

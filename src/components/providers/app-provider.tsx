@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -9,27 +8,8 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  deleteDoc,
-  increment, 
-  query, 
-  orderBy, 
-  limit, 
-  getDocs, 
-  startAfter,
-  DocumentSnapshot,
-  serverTimestamp,
-  where,
-  addDoc
-} from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes, getStorage, deleteObject } from 'firebase/storage';
-import { useFirestore, useFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import type { Product, UserProfile, ProductCategory, RestockRequest } from '@/lib/types';
+import { useUser, useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import type { Product, UserProfile, RestockRequest } from '@/lib/types';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { saveProductsToCache, getCachedProducts } from '@/lib/db-persistence';
 import { useToast } from '@/hooks/use-toast';
@@ -115,7 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isRoleLoaded, setIsRoleLoaded] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -140,6 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      const { doc, getDoc } = await import('firebase/firestore');
       const userDocRef = doc(firestore, 'users', user.uid);
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
@@ -171,11 +152,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setProducts(cached.filter(p => !p.isArchived));
           setIsLoadingProducts(false);
         }
-      } catch (e) {
-        console.warn("Cache load skipped.");
-      }
+      } catch (e) {}
 
       try {
+        const { collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
         const q = query(
           collection(firestore, 'SareeCollection'), 
           orderBy('id', 'desc'), 
@@ -203,6 +183,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore || !lastDoc || isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
     try {
+      const { collection, query, orderBy, limit, startAfter, getDocs } = await import('firebase/firestore');
       const q = query(
         collection(firestore, 'SareeCollection'),
         orderBy('id', 'desc'),
@@ -230,6 +211,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async function fetchVarieties() {
       if (!firestore) return;
       try {
+        const { collection, getDocs } = await import('firebase/firestore');
         const snap = await getDocs(collection(firestore, 'sareeVarieties'));
         const custom = snap.docs.map(d => ({ ...d.data(), id: d.id } as SareeVariety));
         const list = [...custom];
@@ -250,10 +232,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore) return;
     setIsHeroImageLoading(true);
     try {
+      const { doc, getDoc } = await import('firebase/firestore');
       const settingsRef = doc(firestore, 'settings', 'hero');
       const docSnap = await getDoc(settingsRef);
       if (docSnap.exists()) {
-        setHeroImageUrl(docSnap.data().imageUrl);
+        setHeroImageUrl(docSnap.data().imageUrl || null);
       } else {
         setHeroImageUrl(null);
       }
@@ -276,12 +259,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [firestore, fetchHeroImageUrl]);
 
-  const incrementProductMetric = (productId: string, metric: 'likes' | 'shares') => {
+  const incrementProductMetric = async (productId: string, metric: 'likes' | 'shares') => {
     if (!firestore) return;
+    const { doc, updateDoc, increment } = await import('firebase/firestore');
     const docRef = doc(firestore, 'SareeCollection', productId);
-    updateDoc(docRef, { [metric]: increment(1) }).catch(e => {
-       console.error("Metric update error", e);
-    });
+    updateDoc(docRef, { [metric]: increment(1) }).catch(e => {});
     setProducts(prev => {
       return prev.map(p => p.id === productId ? { ...p, [metric]: (p[metric] || 0) + 1 } : p);
     });
@@ -289,6 +271,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const archiveProduct = async (productId: string, shouldArchive: boolean) => {
     if (!firestore) return;
+    const { doc, updateDoc } = await import('firebase/firestore');
     const docRef = doc(firestore, 'SareeCollection', productId);
     await updateDoc(docRef, { isArchived: shouldArchive });
     
@@ -299,6 +282,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteProductPermanently = async (productId: string) => {
     if (!firestore || !auth?.currentUser) return;
+    
+    const { getStorage, ref, deleteObject } = await import('firebase/storage');
+    const { doc, deleteDoc } = await import('firebase/firestore');
     
     const storage = getStorage();
     const docRef = doc(firestore, 'SareeCollection', productId);
@@ -313,14 +299,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       for (const path of filePaths) {
         const fileRef = ref(storage, path);
-        await deleteObject(fileRef).catch(() => console.warn(`File already deleted or missing: ${path}`));
+        await deleteObject(fileRef).catch(() => {});
       }
 
       await deleteDoc(docRef);
       setProducts(prev => prev.filter(p => p.id !== productId));
-      
     } catch (e) {
-      console.error("Permanent deletion failed", e);
       throw e;
     }
   };
@@ -329,6 +313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore || !user || user.isAnonymous) return;
     
     try {
+      const { collection, query, where, getDocs, addDoc, serverTimestamp } = await import('firebase/firestore');
       const q = query(
         collection(firestore, 'restockRequests'),
         where('productId', '==', product.id),
@@ -353,14 +338,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       toast({ title: "Waitlist Registered!", description: "We will notify you the moment this piece is restocked." });
     } catch (e) {
-      toast({ variant: 'destructive', title: "Request Failed", description: "Could not add to waitlist." });
+      toast({ variant: 'destructive', title: "Request Failed" });
     }
   };
 
   const addProduct = async (newProductData: Omit<Product, 'id' | 'sareeImg' | 'modelImg'> & { sareeImageFile: File, modelImageDataUrl: string }): Promise<void> => {
-    if (!firestore || !auth?.currentUser) {
-        throw new Error("Access denied.");
-    }
+    if (!firestore || !auth?.currentUser) throw new Error("Access denied.");
+
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { doc, collection, setDoc, serverTimestamp } = await import('firebase/firestore');
 
     const storage = getStorage();
     const newDocRef = doc(collection(firestore, 'SareeCollection'));
@@ -410,9 +396,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   
   const updateHeroImage = async (image: File | Blob) => {
-     if (!firestore || !isAdmin) {
-        throw new Error("Access denied.");
-    }
+     if (!firestore || !isAdmin) throw new Error("Access denied.");
+     const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+     const { doc, setDoc } = await import('firebase/firestore');
+
     const storage = getStorage();
     const imageRef = ref(storage, 'settings/hero-image.jpg');
 
@@ -423,9 +410,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await setDoc(settingsRef, { imageUrl }, { merge: true });
         setHeroImageUrl(imageUrl); 
     } catch (serverError: any) {
-        const isStorageError = serverError.code?.includes('storage/');
         const error = new FirestorePermissionError({
-            path: isStorageError ? imageRef.fullPath : 'settings/hero',
+            path: 'settings/hero',
             operation: 'write',
         });
         errorEmitter.emit('permission-error', error);
@@ -454,7 +440,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       incrementProductMetric,
       submitRestockRequest,
     }),
-    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, loadMore, heroImageUrl, isHeroImageLoading, addProduct, archiveProduct, deleteProductPermanently, updateHeroImage, fetchUserProfile, submitRestockRequest]
+    [isAdmin, isWholesaler, isRoleLoaded, products, sareeVarieties, isUserLoading, isLoadingProducts, isFetchingMore, hasMore, lastDoc, heroImageUrl, isHeroImageLoading, fetchUserProfile, submitRestockRequest]
   );
 
   return (

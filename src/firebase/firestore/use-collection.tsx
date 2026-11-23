@@ -1,45 +1,35 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  onSnapshot,
-  type Query,
-  type DocumentData,
-  type FirestoreError,
-  type CollectionReference,
-} from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { isMemoized } from '@/firebase/provider';
 
 export type WithId<T> = T & { id: string };
 
 export interface UseCollectionResult<T> {
   data: WithId<T>[] | null;
   isLoading: boolean;
-  error: FirestoreError | Error | null;
+  error: any;
 }
 
+/**
+ * A safe hook for Firestore collections that dynamically imports SDK functions
+ * to prevent SSR crashes.
+ */
 export function useCollection<T = any>(
-  memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
+  memoizedQuery: any,
 ): UseCollectionResult<T> {
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [error, setError] = useState<any>(null);
   
   const subscriptionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery || typeof window === 'undefined') {
+    if (!memoizedQuery || typeof window === 'undefined') {
       setData(null);
       setIsLoading(false);
-      setError(null);
-      subscriptionRef.current = null;
       return;
-    }
-
-    if (process.env.NODE_ENV !== 'production' && !isMemoized(memoizedTargetRefOrQuery)) {
-      console.warn('useCollection: memoizedTargetRefOrQuery was not properly memoized.');
     }
 
     const currentSubId = Math.random().toString(36).substring(7);
@@ -48,41 +38,47 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
-      (snapshot) => {
-        if (subscriptionRef.current !== currentSubId) return;
+    let unsubscribe: () => void = () => {};
 
-        const results: WithId<T>[] = snapshot.docs.map((doc) => ({
-          ...(doc.data() as T),
-          id: doc.id,
-        }));
-        
-        setData(results);
-        setError(null);
-        setIsLoading(false);
-      },
-      (serverError) => {
-        if (subscriptionRef.current !== currentSubId) return;
+    // Dynamically import Firestore SDK to ensure it only runs in the browser
+    import('firebase/firestore').then(({ onSnapshot }) => {
+      if (subscriptionRef.current !== currentSubId) return;
 
-        const path = (memoizedTargetRefOrQuery as any).path || 'query';
-        const permissionError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        });
+      unsubscribe = onSnapshot(
+        memoizedQuery,
+        (snapshot) => {
+          if (subscriptionRef.current !== currentSubId) return;
 
-        setError(permissionError);
-        setData(null);
-        setIsLoading(false);
-        errorEmitter.emit('permission-error', permissionError);
-      }
-    );
+          const results: WithId<T>[] = snapshot.docs.map((doc) => ({
+            ...(doc.data() as T),
+            id: doc.id,
+          }));
+          
+          setData(results);
+          setError(null);
+          setIsLoading(false);
+        },
+        (serverError) => {
+          if (subscriptionRef.current !== currentSubId) return;
+
+          const permissionError = new FirestorePermissionError({
+            operation: 'list',
+            path: memoizedQuery.path || 'query',
+          });
+
+          setError(permissionError);
+          setData(null);
+          setIsLoading(false);
+          errorEmitter.emit('permission-error', permissionError);
+        }
+      );
+    });
 
     return () => {
       subscriptionRef.current = null;
       unsubscribe();
     };
-  }, [memoizedTargetRefOrQuery]);
+  }, [memoizedQuery]);
 
   return { data, isLoading, error };
 }

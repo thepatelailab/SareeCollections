@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * @fileOverview Safe error handling for Firestore permissions.
- * Refactored to be a pure utility class with no Firebase SDK dependencies
- * to prevent "prototype" crashes during Server-Side Rendering (SSR).
+ * @fileOverview Pure TypeScript error class for Firestore permissions.
+ * This file contains NO imports from the Firebase SDK to prevent prototype 
+ * crashes during server-side evaluation in environments like Vercel.
  */
 
-type SecurityRuleContext = {
+export type SecurityRuleContext = {
   path: string;
   operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
   requestResourceData?: any;
@@ -44,7 +44,7 @@ export class FirestorePermissionError extends Error {
     this.name = 'FirebaseError';
     this.request = requestObject;
     
-    // Ensure the prototype is set correctly for custom errors without relying on SDK prototypes
+    // Ensure correct prototype chain
     Object.setPrototypeOf(this, FirestorePermissionError.prototype);
   }
 }

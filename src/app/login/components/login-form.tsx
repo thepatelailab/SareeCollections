@@ -3,14 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  linkWithCredential,
-  EmailAuthProvider,
-  signInWithEmailAndPassword,
-  User,
-} from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -44,7 +37,6 @@ export function LoginForm() {
 
   const redirectUrl = searchParams.get('redirect') || '/';
 
-  // If already logged in, show a dashboard redirect UI
   if (currentUser && !currentUser.isAnonymous) {
     return (
       <Card className="w-full max-w-sm border-none shadow-xl rounded-3xl">
@@ -79,9 +71,10 @@ export function LoginForm() {
     );
   }
 
-  const syncUserProfile = async (user: User) => {
+  const syncUserProfile = async (user: any) => {
     if (!firestore) return;
     try {
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
       const userRef = doc(firestore, 'users', user.uid);
       const docSnap = await getDoc(userRef);
       
@@ -90,9 +83,7 @@ export function LoginForm() {
         await setDoc(userRef, { role }, { merge: true });
       }
       await refetchUserProfile();
-    } catch (e) {
-      console.warn("Profile sync delay:", e);
-    }
+    } catch (e) {}
   };
 
   const handleAuthAction = async (action: 'login' | 'signup') => {
@@ -100,35 +91,24 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      let finalUser: User;
+      const { signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider } = await import('firebase/auth');
+      let finalUser: any;
 
       if (action === 'signup') {
-        if (!currentUser) throw new Error("No anonymous session found.");
+        if (!currentUser) throw new Error("Session issue.");
         const credential = EmailAuthProvider.credential(email, password);
         const userCredential = await linkWithCredential(currentUser, credential);
         finalUser = userCredential.user;
       } else {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         finalUser = userCredential.user;
       }
 
-      toast({
-        title: action === 'signup' ? 'Account Created!' : 'Login Successful!',
-        description: "Welcome back to SareeDukan.",
-      });
-
+      toast({ title: 'Authentication Successful!' });
       syncUserProfile(finalUser);
       router.push(redirectUrl);
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -144,43 +124,21 @@ export function LoginForm() {
         <Card className="border-none shadow-xl rounded-3xl">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-primary">Login</CardTitle>
-            <CardDescription>
-              Sign in to your account to continue.
-            </CardDescription>
+            <CardDescription>Sign in to your account.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="login-email">Email</Label>
-              <Input
-                id="login-email"
-                type="email"
-                placeholder="m@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="rounded-xl h-12"
-              />
+              <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="rounded-xl h-12" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="login-password">Password</Label>
-              <Input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="rounded-xl h-12"
-              />
+              <Input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl h-12" />
             </div>
           </CardContent>
           <CardFooter>
-            <Button
-              onClick={() => handleAuthAction('login')}
-              className="w-full h-12 rounded-xl bg-primary text-white"
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Login
+            <Button onClick={() => handleAuthAction('login')} className="w-full h-12 rounded-xl bg-primary text-white" disabled={isLoading} suppressHydrationWarning>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login'}
             </Button>
           </CardFooter>
         </Card>
@@ -189,43 +147,21 @@ export function LoginForm() {
         <Card className="border-none shadow-xl rounded-3xl">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-primary">Sign Up</CardTitle>
-            <CardDescription>
-              Create a new account to place your order.
-            </CardDescription>
+            <CardDescription>Create a new account.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="signup-email">Email</Label>
-              <Input
-                id="signup-email"
-                type="email"
-                placeholder="m@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="rounded-xl h-12"
-              />
+              <Input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="rounded-xl h-12" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="signup-password">Password</Label>
-              <Input
-                id="signup-password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="rounded-xl h-12"
-              />
+              <Input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl h-12" />
             </div>
           </CardContent>
           <CardFooter>
-            <Button
-              onClick={() => handleAuthAction('signup')}
-              className="w-full h-12 rounded-xl bg-primary text-white"
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign Up
+            <Button onClick={() => handleAuthAction('signup')} className="w-full h-12 rounded-xl bg-primary text-white" disabled={isLoading} suppressHydrationWarning>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sign Up'}
             </Button>
           </CardFooter>
         </Card>
