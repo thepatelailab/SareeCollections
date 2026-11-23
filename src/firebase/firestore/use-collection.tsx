@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type {
+import {
+  onSnapshot,
   Query,
   DocumentData,
   FirestoreError,
@@ -50,9 +51,6 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
     setError(null);
-
-    // Dynamic require prevents evaluation during SSR
-    const { onSnapshot } = require('firebase/firestore');
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,

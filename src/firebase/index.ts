@@ -7,9 +7,9 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp, getApp } from 'firebase/app';
-import type { Auth } from 'firebase/auth';
-import type { Firestore } from 'firebase/firestore';
-import type { FirebaseStorage } from 'firebase/storage';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 export interface FirebaseSdks {
   firebaseApp: FirebaseApp | null;
@@ -21,7 +21,7 @@ export interface FirebaseSdks {
 let sdkCache: FirebaseSdks | null = null;
 
 export function initializeFirebase(): FirebaseSdks {
-  // Guard for SSR: Return app instance but no services
+  // Guard for SSR: Return null instances
   if (typeof window === 'undefined') {
     return {
       firebaseApp: null,
@@ -36,17 +36,11 @@ export function initializeFirebase(): FirebaseSdks {
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-    // Dynamically require service SDKs to ensure side-effects (registration) 
-    // run before we call the getters. This prevents the "Component not registered" error.
-    const authModule = require('firebase/auth');
-    const firestoreModule = require('firebase/firestore');
-    const storageModule = require('firebase/storage');
-
     sdkCache = {
       firebaseApp: app,
-      auth: authModule.getAuth(app),
-      firestore: firestoreModule.getFirestore(app),
-      storage: storageModule.getStorage(app),
+      auth: getAuth(app),
+      firestore: getFirestore(app),
+      storage: getStorage(app),
     };
     
     return sdkCache;

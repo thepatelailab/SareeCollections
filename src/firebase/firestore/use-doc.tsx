@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type {
+import {
+  onSnapshot,
   DocumentReference,
   DocumentData,
   FirestoreError,
@@ -49,9 +50,6 @@ export function useDoc<T = any>(
 
     setIsLoading(true);
     setError(null);
-
-    // Dynamic require prevents evaluation during SSR
-    const { onSnapshot } = require('firebase/firestore');
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
