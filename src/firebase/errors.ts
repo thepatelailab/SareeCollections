@@ -2,7 +2,8 @@
 
 /**
  * @fileOverview Safe error handling for Firestore permissions.
- * This file is now a pure utility to prevent SSR prototype crashes.
+ * Refactored to be a pure utility class with no Firebase SDK dependencies
+ * to prevent "prototype" crashes during Server-Side Rendering (SSR).
  */
 
 type SecurityRuleContext = {
@@ -20,9 +21,6 @@ interface SecurityRuleRequest {
   };
 }
 
-/**
- * Builds the simulated request object for the error message.
- */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   return {
     auth: null,
@@ -45,5 +43,8 @@ export class FirestorePermissionError extends Error {
     super(buildErrorMessage(requestObject));
     this.name = 'FirebaseError';
     this.request = requestObject;
+    
+    // Ensure the prototype is set correctly for custom errors
+    Object.setPrototypeOf(this, FirestorePermissionError.prototype);
   }
 }

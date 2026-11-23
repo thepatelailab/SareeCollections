@@ -1,27 +1,22 @@
 'use client';
 
 /**
- * @fileOverview Firebase Client SDK Initialization barrel file.
- * Safe for both SSR and client-side execution.
+ * @fileOverview Refined Firebase Client SDK Initialization.
+ * Strictly guards against server-side execution to prevent "prototype" errors on Vercel/Node.js.
  */
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, FirebaseApp, getApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 export interface FirebaseSdks {
-  firebaseApp: FirebaseApp | null;
-  auth: Auth | null;
-  firestore: Firestore | null;
-  storage: FirebaseStorage | null;
+  firebaseApp: any;
+  auth: any;
+  firestore: any;
+  storage: any;
 }
 
 let sdkCache: FirebaseSdks | null = null;
 
 export function initializeFirebase(): FirebaseSdks {
-  // Guard for SSR: Return null instances
   if (typeof window === 'undefined') {
     return {
       firebaseApp: null,
@@ -34,6 +29,11 @@ export function initializeFirebase(): FirebaseSdks {
   if (sdkCache) return sdkCache;
 
   try {
+    const { initializeApp, getApps, getApp } = require('firebase/app');
+    const { getAuth } = require('firebase/auth');
+    const { getFirestore } = require('firebase/firestore');
+    const { getStorage } = require('firebase/storage');
+
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
     sdkCache = {

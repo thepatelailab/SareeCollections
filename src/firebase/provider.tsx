@@ -66,7 +66,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    // Only run authentication listeners in the browser
     if (!auth || typeof window === 'undefined') {
       setUserAuthState({ user: null, isUserLoading: false, userError: null });
       return;
@@ -85,7 +84,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       );
       return () => unsubscribe();
     } catch (e) {
-      console.warn("Auth state listener failed to initialize:", e);
       setUserAuthState({ user: null, isUserLoading: false, userError: null });
     }
   }, [auth]);

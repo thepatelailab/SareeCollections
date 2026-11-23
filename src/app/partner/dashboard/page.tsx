@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,6 +20,9 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { UserProfile } from '@/lib/types';
 import Image from 'next/image';
+
+// Increase timeout for AI generation tasks triggered from this page on Vercel
+export const maxDuration = 60;
 
 export default function PartnerDashboardPage() {
   const { user, isUserLoading } = useUser();

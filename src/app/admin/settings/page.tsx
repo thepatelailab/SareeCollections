@@ -26,6 +26,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 
+// Increase timeout for AI generation tasks (e.g. Hero image synthesis)
+export const maxDuration = 60;
+
 export default function AdminSettingsPage() {
   const { user, isUserLoading } = useUser();
   const { isAdmin, isLoading: isAppLoading } = useAppContext();
