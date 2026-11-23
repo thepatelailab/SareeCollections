@@ -12,14 +12,12 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   const [services, setServices] = useState<FirebaseSdks | null>(null);
 
   useEffect(() => {
-    // Initialize only in the browser to prevent prototype errors on Vercel
+    // Only initialize in the browser to prevent "prototype" errors on Vercel
     const initialized = initializeFirebase();
     setServices(initialized);
   }, []);
 
-  // Critical: Do not render children until services are ready.
-  // This prevents the "useFirebase must be used within a FirebaseProvider" error
-  // which happens if a child (like AppProvider) calls the context too early.
+  // Critical: Do not render children until services are ready on the client.
   if (!services || !services.firebaseApp) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

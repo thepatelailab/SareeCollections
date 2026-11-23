@@ -2,16 +2,20 @@
 
 /**
  * @fileOverview Refined Firebase Client SDK Initialization.
- * Strictly guards against server-side execution to prevent "prototype" errors on Vercel/Node.js.
+ * Standardizes imports to avoid type mismatches and guards against server-side execution.
  */
 
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from '@/firebase/config';
 
 export interface FirebaseSdks {
-  firebaseApp: any;
-  auth: any;
-  firestore: any;
-  storage: any;
+  firebaseApp: FirebaseApp | null;
+  auth: Auth | null;
+  firestore: Firestore | null;
+  storage: FirebaseStorage | null;
 }
 
 let sdkCache: FirebaseSdks | null = null;
@@ -29,11 +33,6 @@ export function initializeFirebase(): FirebaseSdks {
   if (sdkCache) return sdkCache;
 
   try {
-    const { initializeApp, getApps, getApp } = require('firebase/app');
-    const { getAuth } = require('firebase/auth');
-    const { getFirestore } = require('firebase/firestore');
-    const { getStorage } = require('firebase/storage');
-
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
     sdkCache = {
