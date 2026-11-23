@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link';
 import Image from 'next/image';
-import { Filter, X, LayoutGrid, Flower2, Shirt, ArrowDown, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Filter, X, LayoutGrid, Flower2, Shirt, ArrowDown, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
@@ -46,11 +45,14 @@ export default function Home() {
     });
   }, [products, selectedCategory, selectedVariety, selectedPartner]);
 
-  const currentHeroImage = heroImageUrl || 'https://images.unsplash.com/photo-1610992383821-DA203653b619?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+  // Robust fallback for the hero image to prevent broken src errors
+  const currentHeroImage = (heroImageUrl && heroImageUrl.trim() !== '') 
+    ? heroImageUrl 
+    : 'https://images.unsplash.com/photo-1610992383821-DA203653b619?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
   return (
     <>
-      <section className="w-full bg-muted overflow-hidden">
+      <section className="w-full bg-muted overflow-hidden min-h-[200px] flex items-center justify-center">
         <Link href="#collection" className="block w-full">
           {isHeroImageLoading ? (
             <Skeleton className="w-full aspect-[21/9] md:aspect-[3/1]" />
