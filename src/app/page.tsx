@@ -48,7 +48,7 @@ export default function Home() {
   // Robust fallback for the hero image to prevent broken src errors
   const currentHeroImage = (heroImageUrl && heroImageUrl.trim() !== '') 
     ? heroImageUrl 
-    : 'https://images.unsplash.com/photo-1610992383821-DA203653b619?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+    : 'https://images.unsplash.com/photo-1610992383821-DA203653b619?q=80&w=2070&auto=format&fit=crop';
 
   return (
     <>
@@ -92,6 +92,7 @@ export default function Home() {
                       variant="ghost" 
                       size="sm" 
                       className="rounded-full h-9 px-4 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10"
+                      suppressHydrationWarning
                     >
                       <span className="text-[10px] font-black uppercase tracking-widest mr-2">
                         {isHeaderExpanded ? 'Hide Filters' : 'Explore Filters'}
@@ -165,6 +166,7 @@ export default function Home() {
                   size="sm" 
                   onClick={() => { setSelectedVariety('all'); setSelectedPartner('all'); }}
                   className="text-[10px] font-black uppercase tracking-widest text-destructive hover:bg-destructive/5"
+                  suppressHydrationWarning
                 >
                   <X className="h-3 w-3 mr-1" /> Clear
                 </Button>
@@ -198,6 +200,7 @@ export default function Home() {
                   disabled={isFetchingMore}
                   variant="outline"
                   className="rounded-full px-12 h-14 border-primary/10 hover:bg-primary hover:text-white font-headline text-xl lowercase transition-all shadow-xl group"
+                  suppressHydrationWarning
                 >
                   {isFetchingMore ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
