@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, type ReactNode } from 'react';
+import React, { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase, FirebaseSdks } from '@/firebase';
 
@@ -9,16 +9,20 @@ interface FirebaseClientProviderProps {
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const [services, setServices] = useState<FirebaseSdks | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Only initialize in the browser to prevent "prototype" errors on Vercel
-    const initialized = initializeFirebase();
-    setServices(initialized);
+    setIsMounted(true);
   }, []);
 
-  // Critical: Do not render children until services are ready on the client.
-  if (!services || !services.firebaseApp) {
+  const services = useMemo(() => {
+    if (!isMounted) return null;
+    return initializeFirebase();
+  }, [isMounted]);
+
+  // Critical: Strictly prevent any rendering on the server.
+  // This prevents the SDK from being evaluated during Vercel's build/pre-render pass.
+  if (!isMounted || !services || !services.firebaseApp) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-primary font-headline text-xl lowercase opacity-40">

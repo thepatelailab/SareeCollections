@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type {
-  Query,
-  DocumentData,
-  FirestoreError,
-  CollectionReference,
+import {
+  onSnapshot,
+  type Query,
+  type DocumentData,
+  type FirestoreError,
+  type CollectionReference,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -19,10 +20,6 @@ export interface UseCollectionResult<T> {
   error: FirestoreError | Error | null;
 }
 
-/**
- * React hook to subscribe to a Firestore collection or query in real-time.
- * Uses dynamic imports to prevent SSR crashes.
- */
 export function useCollection<T = any>(
   memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
 ): UseCollectionResult<T> {
@@ -51,15 +48,12 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Dynamic import to prevent SSR "prototype" error
-    const { onSnapshot } = require('firebase/firestore');
-
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      (snapshot: any) => {
+      (snapshot) => {
         if (subscriptionRef.current !== currentSubId) return;
 
-        const results: WithId<T>[] = snapshot.docs.map((doc: any) => ({
+        const results: WithId<T>[] = snapshot.docs.map((doc) => ({
           ...(doc.data() as T),
           id: doc.id,
         }));
@@ -68,11 +62,10 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      async (serverError: FirestoreError) => {
+      (serverError) => {
         if (subscriptionRef.current !== currentSubId) return;
 
         const path = (memoizedTargetRefOrQuery as any).path || 'query';
-
         const permissionError = new FirestorePermissionError({
           operation: 'list',
           path,

@@ -1,10 +1,5 @@
 'use client';
 
-/**
- * @fileOverview Refined Firebase Client SDK Initialization.
- * Standardizes imports to avoid type mismatches and guards against server-side execution.
- */
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
@@ -21,6 +16,7 @@ export interface FirebaseSdks {
 let sdkCache: FirebaseSdks | null = null;
 
 export function initializeFirebase(): FirebaseSdks {
+  // Guard against SSR - SDK must only run in the browser
   if (typeof window === 'undefined') {
     return {
       firebaseApp: null,
@@ -44,7 +40,7 @@ export function initializeFirebase(): FirebaseSdks {
     
     return sdkCache;
   } catch (error) {
-    console.error("Firebase service initialization failed:", error);
+    console.error("Firebase initialization failed:", error);
     return {
       firebaseApp: null,
       auth: null,

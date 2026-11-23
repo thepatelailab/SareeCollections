@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type {
-  DocumentReference,
-  DocumentData,
-  FirestoreError,
+import {
+  onSnapshot,
+  type DocumentReference,
+  type DocumentData,
+  type FirestoreError,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -18,10 +19,6 @@ export interface UseDocResult<T> {
   error: FirestoreError | Error | null;
 }
 
-/**
- * React hook to subscribe to a single Firestore document in real-time.
- * Uses dynamic imports to prevent SSR crashes.
- */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
@@ -50,12 +47,9 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Dynamic import to prevent SSR "prototype" error
-    const { onSnapshot } = require('firebase/firestore');
-
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      (snapshot: any) => {
+      (snapshot) => {
         if (subscriptionRef.current !== currentSubId) return;
 
         if (snapshot.exists()) {
@@ -66,7 +60,7 @@ export function useDoc<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (serverError: FirestoreError) => {
+      (serverError) => {
         if (subscriptionRef.current !== currentSubId) return;
 
         const contextualError = new FirestorePermissionError({
