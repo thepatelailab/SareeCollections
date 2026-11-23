@@ -36,21 +36,17 @@ export function initializeFirebase(): FirebaseSdks {
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-    // Use require to ensure these are only loaded in the browser
-    // and that side-effects (registration) run before we call getters
-    const { getAuth } = require('firebase/auth');
-    const { getFirestore } = require('firebase/firestore');
-    const { getStorage } = require('firebase/storage');
-
-    const auth = getAuth(app);
-    const firestore = getFirestore(app);
-    const storage = getStorage(app);
+    // Dynamically require service SDKs to ensure side-effects (registration) 
+    // run before we call the getters. This prevents the "Component not registered" error.
+    const authModule = require('firebase/auth');
+    const firestoreModule = require('firebase/firestore');
+    const storageModule = require('firebase/storage');
 
     sdkCache = {
       firebaseApp: app,
-      auth,
-      firestore,
-      storage,
+      auth: authModule.getAuth(app),
+      firestore: firestoreModule.getFirestore(app),
+      storage: storageModule.getStorage(app),
     };
     
     return sdkCache;

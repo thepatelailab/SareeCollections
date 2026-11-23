@@ -51,7 +51,10 @@ export function Header() {
           <NavigationMenu>
             <NavigationMenuList className="gap-2 lg:gap-4">
               <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-1.5 h-auto rounded-full transition-all font-headline text-[9px] font-black border-none shadow-sm uppercase tracking-[0.2em]">
+                <NavigationMenuTrigger 
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-1.5 h-auto rounded-full transition-all font-headline text-[9px] font-black border-none shadow-sm uppercase tracking-[0.2em]"
+                  suppressHydrationWarning
+                >
                   SAREE
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -126,8 +129,8 @@ export function Header() {
 
           <div className="hidden md:block">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="rounded-full h-9 w-9 border-primary/20">
+              <DropdownMenuTrigger asChild suppressHydrationWarning>
+                <Button variant="outline" size="icon" className="rounded-full h-9 w-9 border-primary/20" suppressHydrationWarning>
                   <User className="h-4.5 w-4.5" />
                 </Button>
               </DropdownMenuTrigger>
