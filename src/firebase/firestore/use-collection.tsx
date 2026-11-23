@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  onSnapshot,
+import type {
   Query,
   DocumentData,
   FirestoreError,
-  QuerySnapshot,
   CollectionReference,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -23,6 +21,7 @@ export interface UseCollectionResult<T> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
+ * Uses dynamic imports to prevent SSR crashes.
  */
 export function useCollection<T = any>(
   memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
@@ -52,12 +51,15 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // Dynamic import to prevent SSR "prototype" error
+    const { onSnapshot } = require('firebase/firestore');
+
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      (snapshot: QuerySnapshot<DocumentData>) => {
+      (snapshot: any) => {
         if (subscriptionRef.current !== currentSubId) return;
 
-        const results: WithId<T>[] = snapshot.docs.map(doc => ({
+        const results: WithId<T>[] = snapshot.docs.map((doc: any) => ({
           ...(doc.data() as T),
           id: doc.id,
         }));
